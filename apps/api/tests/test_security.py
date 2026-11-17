@@ -354,3 +354,33 @@ async def test_the_budget_list_is_cached_but_never_stale_after_a_change(stack: S
     assert [b["name"] for b in (await stack.api.get("/api/budgets")).json()["data"]] == ["Renamed"]
     await stack.api.delete(f"/api/budgets/{created['id']}")
     assert (await stack.api.get("/api/budgets")).json()["data"] == []
+
+
+async def test_a_value_computed_before_a_clear_is_never_cached() -> None:
+    """The race behind a flaky UI test: a list request in flight while a budget is created must not re-cache the old list."""
+    import asyncio
+
+    from tokenprofiler_api.cache import TTLCache
+
+    cache = TTLCache(60)
+    started, release = asyncio.Event(), asyncio.Event()
+    state = {"value": "old"}
+
+    async def compute() -> str:
+        started.set()
+        await release.wait()
+        return state["value"]
+
+    task = asyncio.create_task(cache.get_or_compute("k", compute))
+    await started.wait()
+    state["value"] = "new"
+    cache.clear()  # the write happens while the old computation is still running
+    release.set()
+    await task  # the in-flight caller still gets an answer
+
+    async def fresh() -> str:
+        return state["value"]
+
+    assert await cache.get_or_compute("k", fresh) == "new", (
+        "the next reader recomputes instead of reading a stale cached value"
+    )

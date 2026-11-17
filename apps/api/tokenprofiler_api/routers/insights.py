@@ -190,6 +190,7 @@ async def create_budget(b: BudgetIn, state: State, principal: BudgetWriter) -> d
     now = time.time()
     state.cache.clear()
     bid = await state.db.insert("INSERT INTO budgets (name, limit_micro, scope, warn_at, webhook_url, created_at, updated_at) VALUES (?,?,?,?,?,?,?)", b.name, round(b.limit_usd * 1e6), json.dumps(b.scope), b.warn_at, b.webhook_url, now, now)  # fmt: skip
+    state.cache.clear()  # again after the write: a list computed while it was happening must not outlive it
     return await _public(state, (await state.db.query("SELECT * FROM budgets WHERE id = ?", bid))[0])
 
 
@@ -202,6 +203,7 @@ async def update_budget(budget_id: int, b: BudgetIn, state: State, principal: Bu
     n = await state.db.execute("UPDATE budgets SET name=?, limit_micro=?, scope=?, warn_at=?, webhook_url=?, updated_at=? WHERE id=?", b.name, round(b.limit_usd * 1e6), json.dumps(b.scope), b.warn_at, b.webhook_url, time.time(), budget_id)  # fmt: skip
     if not n:
         raise ApiError(404, "budget_not_found", "no such budget")
+    state.cache.clear()
     return await _public(state, (await state.db.query("SELECT * FROM budgets WHERE id = ?", budget_id))[0])
 
 
@@ -211,4 +213,5 @@ async def delete_budget(budget_id: int, state: State, principal: BudgetWriter) -
     state.cache.clear()
     if not await state.db.execute("DELETE FROM budgets WHERE id = ?", budget_id):
         raise ApiError(404, "budget_not_found", "no such budget")
+    state.cache.clear()
     return Response(status_code=204)

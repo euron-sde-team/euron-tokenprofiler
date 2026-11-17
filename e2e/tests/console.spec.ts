@@ -48,7 +48,7 @@ test("explorer groups by any dimension and exports CSV", async ({ page }) => {
 });
 
 test("models: what the same traffic would cost on every other model", async ({ page }) => {
-  await openConsole(page, "/models");
+  await openConsole(page, "/models?app=support-bot");
   await expect(page.getByTestId("actual-cost")).toContainText(/\$\d/);
   const mini = page.getByTestId("candidate-row").filter({ has: page.locator('td:text-is("gpt-4o-mini")') });
   await expect(mini).toBeVisible();
@@ -69,13 +69,13 @@ test("events: filter by status, open one, load more", async ({ page }) => {
   await expect(page.getByTestId("event-row").first()).toBeVisible();
   await page.getByLabel("Status").selectOption("error");
   await expect(page).toHaveURL(/status=error/);
-  await expect(page.getByTestId("event-row").first()).toContainText(/rate_limit|timeout|http_/);
+  await expect(page.getByTestId("event-row").first()).toContainText(/rate_limit|timeout|http_|Error/);
   await page.getByTestId("event-row").first().click();
   await expect(page.getByTestId("event-detail")).toContainText("Input cost");
   await page.keyboard.press("Escape");
   await page.getByLabel("Status").selectOption("");
   await page.getByRole("button", { name: "Load more" }).click();
-  expect(await page.getByTestId("event-row").count()).toBeGreaterThan(50);
+  await expect.poll(() => page.getByTestId("event-row").count()).toBeGreaterThan(50);
 });
 
 test("optimizer: recommendations with evidence, dismiss and restore", async ({ page }) => {

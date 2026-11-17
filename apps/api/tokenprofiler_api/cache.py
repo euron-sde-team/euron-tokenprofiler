@@ -21,6 +21,7 @@ class TTLCache:
         self._items: dict[Any, tuple[float, Any]] = {}
         self._locks: dict[Any, asyncio.Lock] = {}
         self.hits = self.misses = 0
+        self._generation = 0  # bumped by clear(): a result computed before a clear is never stored
 
     async def get_or_compute(self, key: Any, factory: Callable[[], Awaitable[Any]]) -> Any:
         if self.ttl <= 0:
@@ -37,7 +38,12 @@ class TTLCache:
                 self.hits += 1
                 return hit[1]
             self.misses += 1
+            generation = self._generation
             value = await factory()
+            if (
+                generation != self._generation
+            ):  # something changed while this was computing: serve it, but do not keep it
+                return value
             self._items[key] = (self._clock(), value)
             if len(self._items) > MAX_ENTRIES:
                 for old in sorted(self._items, key=lambda k: self._items[k][0])[
@@ -48,4 +54,5 @@ class TTLCache:
             return value
 
     def clear(self) -> None:
+        self._generation += 1
         self._items.clear()

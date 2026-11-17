@@ -1,0 +1,43 @@
+#!/bin/bash
+# Boots TokenProfiler on a fresh instance. Idempotent: safe to re-run through SSM.
+set -euo pipefail
+exec > >(tee /var/log/tokenprofiler-bootstrap.log) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+if ! command -v docker >/dev/null; then
+  apt-get update -y
+  apt-get install -y docker.io awscli sqlite3
+  systemctl enable --now docker
+fi
+
+mkdir -p /var/lib/tokenprofiler/data
+# A replacement instance starts empty: restore the newest backup of both databases if there is one.
+if [ ! -f /var/lib/tokenprofiler/data/usage.db ]; then
+  LATEST=$(aws s3 ls "s3://${reports_bucket}/backups/" --region ${region} | awk '{print $2}' | sort | tail -1 || true)
+  if [ -n "$LATEST" ]; then
+    aws s3 cp "s3://${reports_bucket}/backups/$LATEST" /var/lib/tokenprofiler/data/ --recursive --region ${region} || true
+  fi
+fi
+chown -R 10001:10001 /var/lib/tokenprofiler
+
+# Daily consistent backup of both SQLite databases (the .backup command is safe while the API is writing).
+cat > /etc/cron.daily/tokenprofiler-backup <<'CRON'
+#!/bin/bash
+set -e
+D=$(date -u +%Y-%m-%dT%H%M)
+mkdir -p /tmp/tp-backup && cd /tmp/tp-backup
+for db in usage control; do sqlite3 /var/lib/tokenprofiler/data/$db.db ".backup $db.db"; done
+aws s3 cp . "s3://${reports_bucket}/backups/$D/" --recursive --region ${region}
+rm -rf /tmp/tp-backup
+CRON
+chmod +x /etc/cron.daily/tokenprofiler-backup
+
+aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${registry}
+
+docker rm -f tp-api tp-console 2>/dev/null || true
+docker run -d --name tp-api --restart unless-stopped -p ${api_port}:${api_port} \
+  -v /var/lib/tokenprofiler/data:/data \
+  -e AWS_REGION=${region} -e TP_AWS_REGION=${region} -e TP_REPORTS_BUCKET=${reports_bucket} \
+  -e TP_DATA_DIR=/data -e TP_HOST=0.0.0.0 -e TP_PORT=${api_port} -e TP_SECRETS_ARN=${secret_arn} \
+  ${api_image}
+docker run -d --name tp-console --restart unless-stopped -p ${console_port}:${console_port} ${console_image}

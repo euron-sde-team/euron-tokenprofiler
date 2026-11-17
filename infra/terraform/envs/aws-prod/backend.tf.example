@@ -1,0 +1,10 @@
+# Copy to backend.tf and fill in. State must live in a versioned, encrypted S3 bucket.
+terraform {
+  backend "s3" {
+    bucket       = "<your-terraform-state-bucket>"
+    key          = "tokenprofiler/aws-prod/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+}

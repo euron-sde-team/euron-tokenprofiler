@@ -288,3 +288,69 @@ def test_a_transient_secrets_manager_error_is_retried_but_a_persistent_one_fails
     assert ok.api_key_pepper == "p" and naps == [1.0, 2.0], "two failures are retried with growing pauses"
     with pytest.raises(RuntimeError, match="after 3 attempts"):
         apply_aws_secrets(base, Flaky(99), attempts=3, sleep=lambda s: None)
+
+
+async def test_budgets_and_alerts_do_not_leak_other_teams_spend(stack: Stack) -> None:
+    """Regression: a budget's status carries real spend, so an app-restricted key must only see budgets scoped to its own apps
+    (an unscoped 'company total' budget reveals every app's spend)."""
+    await stack.post_events(
+        [
+            ev(id="a", app="alpha", prompt_tokens=1, completion_tokens=500_000),
+            ev(id="b", app="beta", prompt_tokens=1, completion_tokens=900_000),
+        ]
+    )
+    await stack.api.post("/api/budgets", json={"name": "Company total", "limit_usd": 1_000})
+    mine = (
+        await stack.api.post(
+            "/api/budgets", json={"name": "Alpha", "limit_usd": 1, "scope": {"app": "alpha"}}
+        )
+    ).json()
+    theirs = (
+        await stack.api.post("/api/budgets", json={"name": "Beta", "limit_usd": 1, "scope": {"app": "beta"}})
+    ).json()
+    await stack.api.post("/api/alerts/evaluate")
+    key = await stack.new_key(["read", "budgets:write"], apps=["alpha"])
+    async with stack.client(key) as c:
+        listed = (await c.get("/api/budgets")).json()["data"]
+        assert [b["name"] for b in listed] == ["Alpha"], (
+            "neither the company total nor beta's budget is visible"
+        )
+        alerts = (await c.get("/api/alerts?include_acknowledged=true")).json()["data"]
+        assert alerts and all("Alpha" in a["title"] for a in alerts), [a["title"] for a in alerts]
+        assert "Beta" not in str(alerts) and "Company" not in str(alerts)
+        assert (await c.post("/api/budgets", json={"name": "Sneaky", "limit_usd": 5})).status_code == 403, (
+            "an unscoped budget would reveal total spend"
+        )
+        assert (
+            await c.post("/api/budgets", json={"name": "Sneaky", "limit_usd": 5, "scope": {"app": "beta"}})
+        ).status_code == 403
+        assert (
+            await c.post(
+                "/api/budgets", json={"name": "Alpha two", "limit_usd": 5, "scope": {"app": "alpha"}}
+            )
+        ).status_code == 201
+        assert (await c.delete(f"/api/budgets/{theirs['id']}")).status_code == 404
+        assert (
+            await c.put(
+                f"/api/budgets/{theirs['id']}", json={"name": "x", "limit_usd": 1, "scope": {"app": "alpha"}}
+            )
+        ).status_code == 404
+        assert (await c.delete(f"/api/budgets/{mine['id']}")).status_code == 204
+    assert {b["name"] for b in (await stack.api.get("/api/budgets")).json()["data"]} >= {
+        "Company total",
+        "Beta",
+        "Alpha two",
+    }
+
+
+async def test_the_budget_list_is_cached_but_never_stale_after_a_change(stack: Stack) -> None:
+    stack.state.cache.ttl = 60
+    assert (await stack.api.get("/api/budgets")).json()["data"] == []
+    created = (await stack.api.post("/api/budgets", json={"name": "Fresh", "limit_usd": 5})).json()
+    assert [b["name"] for b in (await stack.api.get("/api/budgets")).json()["data"]] == ["Fresh"], (
+        "creating clears the cache"
+    )
+    await stack.api.put(f"/api/budgets/{created['id']}", json={"name": "Renamed", "limit_usd": 5})
+    assert [b["name"] for b in (await stack.api.get("/api/budgets")).json()["data"]] == ["Renamed"]
+    await stack.api.delete(f"/api/budgets/{created['id']}")
+    assert (await stack.api.get("/api/budgets")).json()["data"] == []

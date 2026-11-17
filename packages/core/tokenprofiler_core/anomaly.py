@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import statistics
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 MIN_BASELINE = 7
@@ -23,7 +24,7 @@ class Anomaly:
 
 
 def detect(
-    series: list[tuple[int, float]],
+    series: Sequence[tuple[int, float]],
     *,
     threshold: float = 3.5,
     window: int = 14,

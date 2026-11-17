@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -98,8 +99,6 @@ def steady() -> None:
             time.sleep(0.25)
         i += 1
 
-
-import threading
 
 t = threading.Thread(target=steady)
 t.start()
@@ -282,7 +281,7 @@ check(
 
 section("the SDK under failure")
 p = Profiler(api.base, "tp_invalid_key", app=f"sdk-{RUN}", flush_interval=0.1, max_retries=1)
-for i in range(100):
+for _ in range(100):
     p.track("gpt-4o", 10, 10)
 p.flush(timeout=5)
 check("rejected telemetry is counted and never raised", p.stats.rejected > 0 or p.stats.dropped > 0)

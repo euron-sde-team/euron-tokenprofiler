@@ -13,6 +13,7 @@ import io
 import json
 import sys
 import time
+import urllib.request
 import uuid
 
 import boto3
@@ -196,8 +197,6 @@ check(
     and ev1["tags"] == {"team": "support"}
     and ev1["estimated"] is False,
 )
-import urllib.request
-
 req = urllib.request.Request(
     api.base + "/proxy/v1/chat/completions",
     data=json.dumps(

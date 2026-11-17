@@ -367,16 +367,17 @@ async def test_a_value_computed_before_a_clear_is_never_cached() -> None:
     state = {"value": "old"}
 
     async def compute() -> str:
+        seen = state["value"]  # the old list, read at the start, like a query that began before the write
         started.set()
         await release.wait()
-        return state["value"]
+        return seen
 
     task = asyncio.create_task(cache.get_or_compute("k", compute))
     await started.wait()
     state["value"] = "new"
     cache.clear()  # the write happens while the old computation is still running
     release.set()
-    await task  # the in-flight caller still gets an answer
+    assert await task == "old", "the in-flight caller still gets its answer"
 
     async def fresh() -> str:
         return state["value"]

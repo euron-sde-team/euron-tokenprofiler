@@ -8,6 +8,7 @@ import { BudgetBadge, budgetTone } from "@/components/ui/badges";
 import { Modal } from "@/components/ui/overlays";
 import { Button, EmptyState, ErrorBanner, Field, Input, PageHeader, ProgressBar, Select, Skeleton } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
+import type { Budget } from "@/lib/types";
 import { formatUsd, relativeTime } from "@/lib/format";
 
 const SCOPES = [{ id: "", label: "Everything" }, { id: "app", label: "One app" }, { id: "environment", label: "One environment" }, { id: "model", label: "One model" }, { id: "prompt_id", label: "One prompt" }];
@@ -29,9 +30,26 @@ export default function BudgetsPage() {
   const refresh = () => { void qc.invalidateQueries({ queryKey: ["budgets"] }); void qc.invalidateQueries({ queryKey: ["alerts"] }); void qc.invalidateQueries({ queryKey: ["alerts-badge"] }); };
   const create = useMutation({
     mutationFn: () => api.createBudget({ name: name.trim(), limit_usd: limit, scope: scopeKey && scopeVal ? { [scopeKey]: scopeVal.trim() } : {}, warn_at: warn / 100, webhook_url: hook.trim() || null }),
-    onSuccess: () => { toast("success", "Budget created"); setOpen(false); setName(""); setScopeVal(""); setHook(""); refresh(); }, onError: (e) => toast("error", e.message),
+    onSuccess: async (created) => {
+      toast("success", "Budget created");
+      setOpen(false); setName(""); setScopeVal(""); setHook("");
+      // A list request that started before this create may still be in flight and would show the old list. Drop it, show the
+      // server's answer immediately, then revalidate.
+      await qc.cancelQueries({ queryKey: ["budgets"] });
+      qc.setQueryData<{ data: Budget[] }>(["budgets"], (old) => ({ data: [...(old?.data ?? []).filter((b) => b.id !== created.id), created] }));
+      refresh();
+    },
+    onError: (e) => toast("error", e.message),
   });
-  const del = useMutation({ mutationFn: (id: number) => api.deleteBudget(id), onSuccess: refresh, onError: (e) => toast("error", e.message) });
+  const del = useMutation({
+    mutationFn: (id: number) => api.deleteBudget(id),
+    onSuccess: async (_, id) => {
+      await qc.cancelQueries({ queryKey: ["budgets"] });
+      qc.setQueryData<{ data: Budget[] }>(["budgets"], (old) => ({ data: (old?.data ?? []).filter((b) => b.id !== id) }));
+      refresh();
+    },
+    onError: (e) => toast("error", e.message),
+  });
   const ack = useMutation({ mutationFn: (id: number) => api.ackAlert(id), onSuccess: refresh, onError: (e) => toast("error", e.message) });
   const evaluate = useMutation({ mutationFn: () => api.evaluateAlerts(), onSuccess: (r) => { toast("info", r.raised ? `${r.raised} new alert(s)` : "Nothing new"); refresh(); }, onError: (e) => toast("error", e.message) });
 

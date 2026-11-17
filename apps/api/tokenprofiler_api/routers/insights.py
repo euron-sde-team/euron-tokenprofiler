@@ -7,7 +7,7 @@ import time
 from dataclasses import asdict
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
 from tokenprofiler_core import recommend
 from tokenprofiler_core.budgets import BudgetIn
@@ -26,6 +26,7 @@ BudgetWriter = Annotated[Principal, Depends(require("budgets:write"))]
 
 @router.get("/recommendations", summary="Specific, quantified ways to cut spend, from your real usage")
 async def recommendations(
+    request: Request,
     state: State,
     principal: Read,
     f: Scoped,
@@ -34,14 +35,18 @@ async def recommendations(
 ) -> dict[str, Any]:
     import asyncio
 
-    result = await asyncio.to_thread(
-        recommend.analyze,
-        state.usage,
-        state.prices,
-        now_ms=now_ms(),
-        settings=recommend.Settings(window_days=window_days),
-        base=f,
-    )
+    async def compute() -> dict[str, Any]:
+        out: dict[str, Any] = await asyncio.to_thread(
+            recommend.analyze,
+            state.usage,
+            state.prices,
+            now_ms=now_ms(),
+            settings=recommend.Settings(window_days=window_days),
+            base=f,
+        )
+        return out
+
+    result = await state.cache.get_or_compute(state.cache_key(request, principal), compute)
     dismissed = {r["rec_id"] for r in await state.db.query("SELECT rec_id FROM dismissed")}
     recs = [{**asdict(r), "dismissed": r.id in dismissed} for r in result["recommendations"]]
     if not include_dismissed:

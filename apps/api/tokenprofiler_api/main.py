@@ -23,6 +23,7 @@ from tokenprofiler_core.store import DAY_MS, UsageStore
 
 from . import __version__, alerts
 from .auth import ApiKeyStore, RateLimiter
+from .cache import TTLCache
 from .db import Database
 from .errors import ApiError, error_response
 from .logging_config import configure_logging
@@ -98,7 +99,7 @@ def create_app(
         client = http_client or httpx.AsyncClient(
             timeout=httpx.Timeout(10, read=cfg.upstream_timeout_s), follow_redirects=False
         )
-        state = AppState(settings=cfg, db=db, usage=usage, keys=ApiKeyStore(db, cfg.api_key_pepper), prices=book, metrics=ApiMetrics(), limiter=RateLimiter(cfg.ingest_rate_limit_rpm), http=client, s3=s3_client if s3_client is not None else make_s3(cfg))  # fmt: skip
+        state = AppState(settings=cfg, db=db, usage=usage, keys=ApiKeyStore(db, cfg.api_key_pepper), prices=book, metrics=ApiMetrics(), limiter=RateLimiter(cfg.ingest_rate_limit_rpm), http=client, cache=TTLCache(cfg.cache_ttl_s), s3=s3_client if s3_client is not None else make_s3(cfg))  # fmt: skip
         app.state.tp = state
         app.state.keys = state.keys
         if cfg.api_key_pepper == DEV_PEPPER:

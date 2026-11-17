@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from tokenprofiler_core import anomaly, forecast
 from tokenprofiler_core.events import now_ms
 from tokenprofiler_core.pricing import Usage
@@ -29,7 +29,14 @@ def _delta(now: float, prev: float) -> float | None:
 
 
 @router.get("/overview", summary="The headline numbers: spend, trend, forecast, top spenders")
-async def overview(state: State, principal: Read, f: Scoped) -> dict[str, Any]:
+async def overview(request: Request, state: State, principal: Read, f: Scoped) -> dict[str, Any]:
+    result: dict[str, Any] = await state.cache.get_or_compute(
+        state.cache_key(request, principal), lambda: _overview(state, f)
+    )
+    return result
+
+
+async def _overview(state: State, f: Filters) -> dict[str, Any]:
     now = now_ms()
     span = max(DAY_MS, (f.until or now) - (f.since or now - 30 * DAY_MS))
     cur = f
@@ -214,7 +221,16 @@ async def prompt_detail(prompt_id: str, state: State, principal: Read, f: Scoped
     "/models/compare",
     summary="What this traffic would have cost on every other model (cost only: quality differs)",
 )
-async def compare_models(state: State, principal: Read, f: Scoped, endpoint: str = "chat") -> dict[str, Any]:
+async def compare_models(
+    request: Request, state: State, principal: Read, f: Scoped, endpoint: str = "chat"
+) -> dict[str, Any]:
+    result: dict[str, Any] = await state.cache.get_or_compute(
+        state.cache_key(request, principal), lambda: _compare(state, f, endpoint)
+    )
+    return result
+
+
+async def _compare(state: State, f: Filters, endpoint: str) -> dict[str, Any]:
     rows = await _q(
         state.usage.aggregate,
         f.narrowed(endpoint=endpoint),

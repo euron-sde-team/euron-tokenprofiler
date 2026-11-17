@@ -212,3 +212,58 @@ async def test_the_optimizer_and_forecast_never_leak_other_apps_through_an_app_r
         ):
             body = (await c.get(path)).text
             assert "support-bot" not in body and "nightly-summarizer" not in body, path
+
+
+async def test_the_dashboard_cache_is_keyed_by_visibility_so_it_can_never_leak_across_keys(
+    stack: Stack,
+) -> None:
+    """Enable the cache, warm it as an admin who sees everything, then read the same URL as an app-restricted key."""
+    stack.state.cache.ttl = 60
+    await stack.post_events(
+        [
+            ev(id="a", app="alpha", prompt_tokens=1_000_000, completion_tokens=0),
+            ev(id="b", app="beta", prompt_tokens=2_000_000, completion_tokens=0),
+        ]
+    )
+    full = (await stack.api.get("/api/overview?range=365d")).json()
+    assert full["totals"]["prompt_tokens"] == 3_000_000
+    key = await stack.new_key(["read"], apps=["alpha"])
+    async with stack.client(key) as c:
+        mine = (await c.get("/api/overview?range=365d")).json()
+        assert mine["totals"]["prompt_tokens"] == 1_000_000 and [r["app"] for r in mine["top_apps"]] == [
+            "alpha"
+        ]
+    assert (await stack.api.get("/api/overview?range=365d")).json()["totals"]["prompt_tokens"] == 3_000_000
+    assert stack.state.cache.hits >= 1, "the admin's second read was a cache hit"
+
+
+async def test_concurrent_identical_requests_compute_once(stack: Stack) -> None:
+    import asyncio
+
+    from tokenprofiler_api.cache import TTLCache
+
+    cache = TTLCache(60)
+    calls = 0
+
+    async def slow() -> int:
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0.05)
+        return 42
+
+    assert (
+        await asyncio.gather(*(cache.get_or_compute("k", slow) for _ in range(20))) == [42] * 20
+        and calls == 1
+    )
+    clock = [0.0]
+    ttl = TTLCache(10, clock=lambda: clock[0])
+    assert (
+        await ttl.get_or_compute("x", slow) == 42 and await ttl.get_or_compute("x", slow) == 42 and calls == 2
+    )
+    clock[0] = 11
+    await ttl.get_or_compute("x", slow)
+    assert calls == 3, "an expired entry is recomputed"
+    off = TTLCache(0)
+    await off.get_or_compute("y", slow)
+    await off.get_or_compute("y", slow)
+    assert calls == 5

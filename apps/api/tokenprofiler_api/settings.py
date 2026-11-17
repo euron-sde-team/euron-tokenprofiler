@@ -33,6 +33,11 @@ class ApiSettings(BaseSettings):
         default=0, ge=0, description="Requests per minute per key on /v1/events and the proxy; 0 = off"
     )
     retention_days: int = Field(default=400, ge=1, description="Events older than this are deleted daily")
+    cache_ttl_s: float = Field(
+        default=15.0,
+        ge=0,
+        description="Seconds to cache the heavy dashboard queries (overview, recommendations, anomalies); 0 disables",
+    )
     derive_prompt_ids: bool = Field(
         default=True,
         description="Group calls by prompt shape when the client gives no prompt_id (needs prompt_text)",

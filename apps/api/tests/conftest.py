@@ -81,7 +81,7 @@ def ev(**kw: Any) -> dict[str, Any]:
 async def stack(tmp_path: Path) -> AsyncIterator[Stack]:
     settings = ApiSettings(
         _env_file=None, data_dir=tmp_path / "data", api_key_pepper="test-pepper-123", bootstrap_api_key=ROOT_KEY, cors_origins=["http://localhost:3300"],
-        upstream_base_url="http://mock/v1", reports_bucket="test-reports", alert_interval_s=3600,
+        upstream_base_url="http://mock/v1", reports_bucket="test-reports", alert_interval_s=3600, cache_ttl_s=0,
     )  # fmt: skip
     mock = httpx.AsyncClient(
         transport=httpx.ASGITransport(app=create_mock(latency_ms=0)), base_url="http://mock"

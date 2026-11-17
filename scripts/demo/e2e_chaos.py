@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import quote
 
 from _client import ROOT, Api
 from tokenprofiler import Profiler
@@ -167,6 +168,14 @@ check(
     and api.call("GET", "/readyz", key="").status == 200,
 )
 sh("start", "floci")
+time.sleep(3)
+# Floci keeps its state in memory, so a restart wipes the secret and bucket Terraform created: re-provision them, as an operator would.
+sh("up", "--force-recreate", "--no-deps", "terraform")
+sh("restart", "api")
+check(
+    "after S3 is re-provisioned the API restarts cleanly (Secrets Manager read with retries)",
+    api.wait_ready(timeout=120),
+)
 
 section("hostile input")
 nasty = [
@@ -198,7 +207,7 @@ for q in (
     "range=1';--",
     "app=' OR 1=1 --&group_by=app",
 ):
-    api.call("GET", f"/api/usage/summary?{q}")
+    api.call("GET", f"/api/usage/summary?{quote(q, safe='=&')}")
 check("SQL injection attempts left the data intact", count(a) == N * BATCH)
 check(
     "path-like and unicode ids are refused or handled",
@@ -271,14 +280,12 @@ check(
     "a team cannot fetch the other's event by id",
     api.call("GET", f"/api/events/{team_b}-1", key=ka).status == 404,
 )
+foreign = api.events([{"model": "gpt-4o", "app": team_b, "prompt_tokens": 1, "completion_tokens": 1}], key=ka)
 check(
     "a team cannot write into the other's app",
-    api.events([{"model": "gpt-4o", "app": team_b, "prompt_tokens": 1, "completion_tokens": 1}], key=ka).body[
-        "rejected"
-    ]
-    == 1,
+    foreign.status == 422 and foreign.error_code == "all_events_invalid",
+    str(foreign.body),
 )
-
 section("the SDK under failure")
 p = Profiler(api.base, "tp_invalid_key", app=f"sdk-{RUN}", flush_interval=0.1, max_retries=1)
 for _ in range(100):

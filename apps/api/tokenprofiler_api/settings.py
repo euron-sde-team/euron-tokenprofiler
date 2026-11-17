@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import time
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any
@@ -88,9 +90,18 @@ def get_settings() -> ApiSettings:
     return ApiSettings()
 
 
-def apply_aws_secrets(settings: ApiSettings, client: Any | None = None) -> ApiSettings:
+def apply_aws_secrets(
+    settings: ApiSettings,
+    client: Any | None = None,
+    *,
+    attempts: int = 5,
+    sleep: Callable[[float], None] = time.sleep,
+) -> ApiSettings:
     """Overlays the pepper and bootstrap key from AWS Secrets Manager (``TP_SECRETS_ARN``), so neither sits in the
-    container environment or a task definition. Without an ARN the settings are returned unchanged."""
+    container environment or a task definition. Without an ARN the settings are returned unchanged.
+
+    Startup fails closed: if the secret cannot be read the API does not start with a default pepper. A transient error is
+    retried with backoff first, so a blip in Secrets Manager (or an emulator still starting) does not need an operator."""
     if not settings.secrets_arn:
         return settings
     if client is None:
@@ -101,7 +112,16 @@ def apply_aws_secrets(settings: ApiSettings, client: Any | None = None) -> ApiSe
             region_name=settings.aws_region or "us-east-1",
             endpoint_url=settings.aws_endpoint_url,
         )
-    data = json.loads(client.get_secret_value(SecretId=settings.secrets_arn)["SecretString"])
-    return settings.model_copy(
-        update={k: data[k] for k in ("api_key_pepper", "bootstrap_api_key") if data.get(k)}
-    )
+    for attempt in range(attempts):
+        try:
+            data = json.loads(client.get_secret_value(SecretId=settings.secrets_arn)["SecretString"])
+            return settings.model_copy(
+                update={k: data[k] for k in ("api_key_pepper", "bootstrap_api_key") if data.get(k)}
+            )
+        except Exception as exc:
+            if attempt == attempts - 1:
+                raise RuntimeError(
+                    f"cannot read secret {settings.secrets_arn!r} from Secrets Manager after {attempts} attempts: {exc}"
+                ) from exc
+            sleep(min(2.0**attempt, 8.0))
+    raise AssertionError("unreachable")

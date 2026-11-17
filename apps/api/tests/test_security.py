@@ -267,3 +267,24 @@ async def test_concurrent_identical_requests_compute_once(stack: Stack) -> None:
     await off.get_or_compute("y", slow)
     await off.get_or_compute("y", slow)
     assert calls == 5
+
+
+def test_a_transient_secrets_manager_error_is_retried_but_a_persistent_one_fails_closed() -> None:
+    import json
+
+    class Flaky:
+        def __init__(self, fail: int) -> None:
+            self.fail, self.calls = fail, 0
+
+        def get_secret_value(self, SecretId: str) -> dict[str, str]:
+            self.calls += 1
+            if self.calls <= self.fail:
+                raise ConnectionError("secrets manager is starting")
+            return {"SecretString": json.dumps({"api_key_pepper": "p", "bootstrap_api_key": "tp_boot0000_x"})}
+
+    naps: list[float] = []
+    base = ApiSettings(_env_file=None, secrets_arn="arn:x")
+    ok = apply_aws_secrets(base, Flaky(2), sleep=naps.append)
+    assert ok.api_key_pepper == "p" and naps == [1.0, 2.0], "two failures are retried with growing pauses"
+    with pytest.raises(RuntimeError, match="after 3 attempts"):
+        apply_aws_secrets(base, Flaky(99), attempts=3, sleep=lambda s: None)

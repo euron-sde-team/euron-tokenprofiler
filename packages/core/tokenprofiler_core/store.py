@@ -158,6 +158,42 @@ class UsageStore:
             inserted = self._conn.total_changes - before
         return inserted, len(rows) - inserted
 
+    def reprice(
+        self,
+        model: str,
+        *,
+        input: float,
+        output: float,
+        cached: float,
+        cache_write: float,
+        batch_discount: float | None,
+    ) -> int:
+        """Recomputes the stored cost of every event for ``model`` from its token counts and the given per-million rates.
+        Cache hits stay at zero spend and record the avoided cost as ``saved_micro``. Returns the events updated."""
+        total = 0
+        with self._lock:
+            for batch, scale in ((0, 1.0), (1, 1.0 - (batch_discount or 0.0))):
+                cur = self._conn.execute(
+                    """UPDATE events SET
+                         cost_input = CASE WHEN cache_hit = 1 THEN 0 ELSE CAST(ROUND((prompt_tokens - cached_tokens - cache_write_tokens) * ? * ?) AS INTEGER) END,
+                         cost_cached = CASE WHEN cache_hit = 1 THEN 0 ELSE CAST(ROUND(cached_tokens * ? * ?) AS INTEGER) END,
+                         cost_cache_write = CASE WHEN cache_hit = 1 THEN 0 ELSE CAST(ROUND(cache_write_tokens * ? * ?) AS INTEGER) END,
+                         cost_output = CASE WHEN cache_hit = 1 THEN 0 ELSE CAST(ROUND(completion_tokens * ? * ?) AS INTEGER) END,
+                         priced = 1
+                       WHERE model = ? AND batch = ?""",
+                    (input, scale, cached, scale, cache_write, scale, output, scale, model, batch),
+                )
+                total += cur.rowcount
+            self._conn.execute(
+                """UPDATE events SET cost_total = cost_input + cost_cached + cost_cache_write + cost_output,
+                     saved_micro = CASE WHEN cache_hit = 1 THEN
+                       CAST(ROUND((prompt_tokens - cached_tokens - cache_write_tokens) * ? + cached_tokens * ? + cache_write_tokens * ? + completion_tokens * ?) AS INTEGER)
+                       ELSE 0 END
+                   WHERE model = ?""",
+                (input, cached, cache_write, output, model),
+            )
+        return total
+
     def delete_before(self, ts: int) -> int:
         with self._lock:
             cur = self._conn.execute("DELETE FROM events WHERE ts < ?", (ts,))

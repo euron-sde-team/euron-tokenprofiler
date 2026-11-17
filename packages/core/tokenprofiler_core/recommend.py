@@ -65,12 +65,7 @@ def analyze(
 ) -> dict[str, Any]:
     cfg = settings or Settings()
     f = base or Filters()
-    f = Filters(
-        since=max(f.since or 0, now_ms - cfg.window_days * DAY_MS),
-        until=f.until,
-        eq=dict(f.eq),
-        tags=dict(f.tags),
-    )
+    f = f.replace(since=max(f.since or 0, now_ms - cfg.window_days * DAY_MS))
     totals = store.aggregate(f, None, ["requests", "cost", "unpriced"])[0]
     first = store.first_ts(f)
     span = (now_ms - first) if first else 0
@@ -220,7 +215,7 @@ def _response_cache(
 def _truncation(store: UsageStore, f: Filters, cfg: Settings) -> list[Recommendation]:
     out = []
     rows = store.aggregate(
-        Filters(since=f.since, until=f.until, eq={**f.eq, "finish_reason": "length"}, tags=f.tags),
+        f.narrowed(finish_reason="length"),
         ["app", "model"],
         ["requests", "cost"],
         limit=100,
@@ -245,7 +240,7 @@ def _truncation(store: UsageStore, f: Filters, cfg: Settings) -> list[Recommenda
 
 def _error_waste(store: UsageStore, f: Filters, cfg: Settings, scale: float) -> list[Recommendation]:
     out = []
-    ef = Filters(since=f.since, until=f.until, eq={**f.eq, "status": "error"}, tags=f.tags)
+    ef = f.narrowed(status="error")
     for r in store.aggregate(ef, ["app", "error_type"], ["requests", "cost", "prompt_tokens"], limit=200):
         saving = round(r["cost"] * scale)
         if r["requests"] < max(10, cfg.min_requests // 3) or saving < cfg.min_savings_micro:
@@ -268,9 +263,7 @@ def _batch(
         p = next((x for x in prices.all() if x.provider == r["provider"] and x.batch_discount), None)
         if p is None or r["requests"] < max(100, cfg.min_requests):
             continue
-        af = Filters(
-            since=f.since, until=f.until, eq={**f.eq, "app": r["app"], "provider": r["provider"]}, tags=f.tags
-        )
+        af = f.narrowed(app=r["app"], provider=r["provider"])
         shape = store.workload_shape(af)
         if shape["batch"] or shape["no_user"] / shape["n"] < 0.7 or shape["no_stream"] / shape["n"] < 0.9:
             continue
@@ -320,7 +313,7 @@ def _unpriced(store: UsageStore, f: Filters, unpriced: int) -> list[Recommendati
     if not unpriced:
         return []
     rows = store.aggregate(
-        Filters(since=f.since, until=f.until, eq=dict(f.eq), tags=f.tags),
+        f,
         ["model"],
         ["requests", "unpriced"],
         limit=500,

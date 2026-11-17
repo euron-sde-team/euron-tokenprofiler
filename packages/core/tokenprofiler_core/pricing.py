@@ -12,6 +12,7 @@ includes any reasoning tokens (providers bill them as output).
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass
 from functools import cache
@@ -101,6 +102,12 @@ class Cost:
         return self.input + self.cached + self.cache_write
 
 
+def half_up(x: float) -> int:
+    """Round half up. SQLite's ROUND() rounds half away from zero, which is the same for non-negative numbers, so a cost
+    computed here and one recomputed in SQL (re-pricing) are always identical. Python's round() is banker's rounding."""
+    return math.floor(x + 0.5)
+
+
 @cache
 def _builtin() -> tuple[str, list[ModelPrice]]:
     raw = json.loads((Path(__file__).parent / "prices.json").read_text(encoding="utf-8"))
@@ -161,8 +168,8 @@ class PriceBook:
         write_rate = p.cache_write if p.cache_write is not None else p.input
         scale = 1 - (p.batch_discount or 0) if batch else 1.0
         return Cost(
-            input=round(usage.uncached_prompt_tokens * p.input * scale),
-            cached=round(usage.cached_tokens * cached_rate * scale),
-            cache_write=round(usage.cache_write_tokens * write_rate * scale),
-            output=round(usage.completion_tokens * p.output * scale),
+            input=half_up(usage.uncached_prompt_tokens * p.input * scale),
+            cached=half_up(usage.cached_tokens * cached_rate * scale),
+            cache_write=half_up(usage.cache_write_tokens * write_rate * scale),
+            output=half_up(usage.completion_tokens * p.output * scale),
         )

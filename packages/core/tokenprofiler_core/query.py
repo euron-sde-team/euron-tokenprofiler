@@ -44,6 +44,10 @@ METRICS: dict[str, str] = {
     "estimated": "SUM(estimated = 1)",
     "avg_latency_ms": "AVG(latency_ms)",
     "max_latency_ms": "MAX(latency_ms)",
+    "max_prompt_tokens": "MAX(prompt_tokens)",
+    "cache_hits": "SUM(cache_hit = 1)",
+    "cost_cached": "SUM(cost_cached)",
+    "cache_write_tokens": "SUM(cache_write_tokens)",
 }
 ORDERABLE = (*METRICS, *DIMENSIONS)
 
@@ -58,6 +62,25 @@ class Filters:
     until: int | None = None  # epoch ms, exclusive
     eq: dict[str, str] = field(default_factory=dict)
     tags: dict[str, str] = field(default_factory=dict)
+    within: dict[str, list[str]] = field(
+        default_factory=dict
+    )  # column IN (...), e.g. the apps an API key may see
+
+    def narrowed(self, **eq: str) -> Filters:
+        """A copy with extra equality filters (the originals, including any allow-lists, are kept)."""
+        return self.replace(eq={**self.eq, **eq})
+
+    def replace(
+        self, *, since: int | None = None, until: int | None = None, eq: dict[str, str] | None = None
+    ) -> Filters:
+        """A copy with some fields changed. Tags and allow-lists always carry over: dropping an allow-list would widen access."""
+        return Filters(
+            self.since if since is None else since,
+            self.until if until is None else until,
+            dict(self.eq if eq is None else eq),
+            dict(self.tags),
+            {k: list(v) for k, v in self.within.items()},
+        )
 
     def where(self) -> tuple[str, list[object]]:
         clauses: list[str] = []
@@ -73,6 +96,14 @@ class Filters:
                 raise QueryError(f"cannot filter by {k!r}")
             clauses.append(f"{k} = ?")
             params.append(v)
+        for k, values in self.within.items():
+            if k not in EQ_FILTERS:
+                raise QueryError(f"cannot filter by {k!r}")
+            if not values:
+                clauses.append("0")  # an empty allow-list matches nothing
+                continue
+            clauses.append(f"{k} IN ({','.join('?' * len(values))})")
+            params.extend(values)
         for k, v in self.tags.items():
             if not re.match(r"^[A-Za-z][A-Za-z0-9_]{0,31}$", k):
                 raise QueryError(f"invalid tag name {k!r}")

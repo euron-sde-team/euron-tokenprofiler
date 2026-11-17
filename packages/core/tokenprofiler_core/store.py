@@ -144,7 +144,8 @@ class UsageStore:
         rows = [e.row() for e in events]
         if not rows:
             return 0, 0
-        sql = f"INSERT OR IGNORE INTO events ({','.join(COLUMNS)}) VALUES ({','.join('?' * len(COLUMNS))})"
+        # ON CONFLICT(id) skips only a duplicate id. (INSERT OR IGNORE would also swallow NOT NULL and CHECK violations.)
+        sql = f"INSERT INTO events ({','.join(COLUMNS)}) VALUES ({','.join('?' * len(COLUMNS))}) ON CONFLICT(id) DO NOTHING"
         with self._lock:
             before = self._conn.total_changes
             self._conn.execute("BEGIN")

@@ -1,0 +1,427 @@
+{
+ "as_of": "2025-06",
+ "currency": "USD",
+ "unit": "per 1M tokens",
+ "note": "Approximate public list prices. They change: verify against your provider's pricing page and override anything that differs with a price file (TP_PRICING_FILE) or PUT /api/pricing/{model}.",
+ "models": [
+  {
+   "id": "gpt-4.1-nano",
+   "provider": "openai",
+   "input": 0.1,
+   "output": 0.4,
+   "tier": "small",
+   "cached_input": 0.025,
+   "context": 1047576,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gpt-4.1-mini",
+   "provider": "openai",
+   "input": 0.4,
+   "output": 1.6,
+   "tier": "mid",
+   "cached_input": 0.1,
+   "context": 1047576,
+   "cheaper": "gpt-4.1-nano",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gpt-4.1",
+   "provider": "openai",
+   "input": 2.0,
+   "output": 8.0,
+   "tier": "flagship",
+   "cached_input": 0.5,
+   "context": 1047576,
+   "cheaper": "gpt-4.1-mini",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gpt-4o-mini",
+   "provider": "openai",
+   "input": 0.15,
+   "output": 0.6,
+   "tier": "small",
+   "cached_input": 0.075,
+   "context": 128000,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gpt-4o",
+   "provider": "openai",
+   "input": 2.5,
+   "output": 10.0,
+   "tier": "flagship",
+   "cached_input": 1.25,
+   "context": 128000,
+   "cheaper": "gpt-4o-mini",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gpt-4-turbo",
+   "provider": "openai",
+   "input": 10.0,
+   "output": 30.0,
+   "tier": "flagship",
+   "context": 128000,
+   "cheaper": "gpt-4o",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gpt-4",
+   "provider": "openai",
+   "input": 30.0,
+   "output": 60.0,
+   "tier": "flagship",
+   "context": 8192,
+   "cheaper": "gpt-4o",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gpt-3.5-turbo",
+   "provider": "openai",
+   "input": 0.5,
+   "output": 1.5,
+   "tier": "small",
+   "context": 16385,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "o1-mini",
+   "provider": "openai",
+   "input": 1.1,
+   "output": 4.4,
+   "tier": "mid",
+   "cached_input": 0.55,
+   "context": 128000,
+   "cheaper": "gpt-4o-mini",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "o1",
+   "provider": "openai",
+   "input": 15.0,
+   "output": 60.0,
+   "tier": "flagship",
+   "cached_input": 7.5,
+   "context": 200000,
+   "cheaper": "o3-mini",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "o3-mini",
+   "provider": "openai",
+   "input": 1.1,
+   "output": 4.4,
+   "tier": "mid",
+   "cached_input": 0.55,
+   "context": 200000,
+   "cheaper": "gpt-4o-mini",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "o3",
+   "provider": "openai",
+   "input": 2.0,
+   "output": 8.0,
+   "tier": "flagship",
+   "cached_input": 0.5,
+   "context": 200000,
+   "cheaper": "o4-mini",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "o4-mini",
+   "provider": "openai",
+   "input": 1.1,
+   "output": 4.4,
+   "tier": "mid",
+   "cached_input": 0.275,
+   "context": 200000,
+   "cheaper": "gpt-4.1-mini",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "text-embedding-3-small",
+   "provider": "openai",
+   "input": 0.02,
+   "output": 0.0,
+   "tier": "small",
+   "context": 8191,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "text-embedding-3-large",
+   "provider": "openai",
+   "input": 0.13,
+   "output": 0.0,
+   "tier": "mid",
+   "context": 8191,
+   "cheaper": "text-embedding-3-small",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "claude-3-haiku",
+   "provider": "anthropic",
+   "input": 0.25,
+   "output": 1.25,
+   "tier": "small",
+   "cached_input": 0.03,
+   "cache_write": 0.3,
+   "context": 200000,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "claude-3-5-haiku",
+   "provider": "anthropic",
+   "input": 0.8,
+   "output": 4.0,
+   "tier": "small",
+   "cached_input": 0.08,
+   "cache_write": 1.0,
+   "context": 200000,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "claude-haiku",
+   "provider": "anthropic",
+   "input": 0.8,
+   "output": 4.0,
+   "tier": "small",
+   "cached_input": 0.08,
+   "cache_write": 1.0,
+   "context": 200000,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "claude-3-5-sonnet",
+   "provider": "anthropic",
+   "input": 3.0,
+   "output": 15.0,
+   "tier": "mid",
+   "cached_input": 0.3,
+   "cache_write": 3.75,
+   "context": 200000,
+   "cheaper": "claude-3-5-haiku",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "claude-3-7-sonnet",
+   "provider": "anthropic",
+   "input": 3.0,
+   "output": 15.0,
+   "tier": "mid",
+   "cached_input": 0.3,
+   "cache_write": 3.75,
+   "context": 200000,
+   "cheaper": "claude-3-5-haiku",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "claude-sonnet",
+   "provider": "anthropic",
+   "input": 3.0,
+   "output": 15.0,
+   "tier": "mid",
+   "cached_input": 0.3,
+   "cache_write": 3.75,
+   "context": 200000,
+   "cheaper": "claude-haiku",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "claude-3-opus",
+   "provider": "anthropic",
+   "input": 15.0,
+   "output": 75.0,
+   "tier": "flagship",
+   "cached_input": 1.5,
+   "cache_write": 18.75,
+   "context": 200000,
+   "cheaper": "claude-3-5-sonnet",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "claude-opus",
+   "provider": "anthropic",
+   "input": 15.0,
+   "output": 75.0,
+   "tier": "flagship",
+   "cached_input": 1.5,
+   "cache_write": 18.75,
+   "context": 200000,
+   "cheaper": "claude-sonnet",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gemini-1.5-flash",
+   "provider": "google",
+   "input": 0.075,
+   "output": 0.3,
+   "tier": "small",
+   "cached_input": 0.01875,
+   "context": 1000000,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gemini-1.5-pro",
+   "provider": "google",
+   "input": 1.25,
+   "output": 5.0,
+   "tier": "flagship",
+   "cached_input": 0.3125,
+   "context": 2000000,
+   "cheaper": "gemini-1.5-flash",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gemini-2.0-flash",
+   "provider": "google",
+   "input": 0.1,
+   "output": 0.4,
+   "tier": "small",
+   "cached_input": 0.025,
+   "context": 1000000,
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gemini-2.5-flash",
+   "provider": "google",
+   "input": 0.3,
+   "output": 2.5,
+   "tier": "mid",
+   "cached_input": 0.075,
+   "context": 1000000,
+   "cheaper": "gemini-2.0-flash",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "gemini-2.5-pro",
+   "provider": "google",
+   "input": 1.25,
+   "output": 10.0,
+   "tier": "flagship",
+   "cached_input": 0.3125,
+   "context": 1000000,
+   "cheaper": "gemini-2.5-flash",
+   "batch_discount": 0.5
+  },
+  {
+   "id": "mistral-small",
+   "provider": "mistral",
+   "input": 0.2,
+   "output": 0.6,
+   "tier": "small",
+   "context": 128000
+  },
+  {
+   "id": "codestral",
+   "provider": "mistral",
+   "input": 0.3,
+   "output": 0.9,
+   "tier": "mid",
+   "context": 256000,
+   "cheaper": "mistral-small"
+  },
+  {
+   "id": "mistral-medium",
+   "provider": "mistral",
+   "input": 0.4,
+   "output": 2.0,
+   "tier": "mid",
+   "context": 128000,
+   "cheaper": "mistral-small"
+  },
+  {
+   "id": "mistral-large",
+   "provider": "mistral",
+   "input": 2.0,
+   "output": 6.0,
+   "tier": "flagship",
+   "context": 128000,
+   "cheaper": "mistral-medium"
+  },
+  {
+   "id": "deepseek-chat",
+   "provider": "deepseek",
+   "input": 0.27,
+   "output": 1.1,
+   "tier": "small",
+   "cached_input": 0.07,
+   "context": 64000
+  },
+  {
+   "id": "deepseek-reasoner",
+   "provider": "deepseek",
+   "input": 0.55,
+   "output": 2.19,
+   "tier": "mid",
+   "cached_input": 0.14,
+   "context": 64000,
+   "cheaper": "deepseek-chat"
+  },
+  {
+   "id": "llama-3.1-8b",
+   "provider": "meta",
+   "input": 0.18,
+   "output": 0.18,
+   "tier": "small",
+   "context": 128000
+  },
+  {
+   "id": "llama-3.1-70b",
+   "provider": "meta",
+   "input": 0.88,
+   "output": 0.88,
+   "tier": "mid",
+   "context": 128000,
+   "cheaper": "llama-3.1-8b"
+  },
+  {
+   "id": "llama-3.3-70b",
+   "provider": "meta",
+   "input": 0.88,
+   "output": 0.88,
+   "tier": "mid",
+   "context": 128000,
+   "cheaper": "llama-3.1-8b"
+  },
+  {
+   "id": "llama-3.1-405b",
+   "provider": "meta",
+   "input": 3.5,
+   "output": 3.5,
+   "tier": "flagship",
+   "context": 128000,
+   "cheaper": "llama-3.3-70b"
+  },
+  {
+   "id": "local",
+   "provider": "self-hosted",
+   "input": 0.0,
+   "output": 0.0,
+   "tier": "small"
+  },
+  {
+   "id": "ollama",
+   "provider": "self-hosted",
+   "input": 0.0,
+   "output": 0.0,
+   "tier": "small"
+  },
+  {
+   "id": "llama.cpp",
+   "provider": "self-hosted",
+   "input": 0.0,
+   "output": 0.0,
+   "tier": "small"
+  },
+  {
+   "id": "mock",
+   "provider": "test",
+   "input": 1.0,
+   "output": 3.0,
+   "tier": "mid"
+  }
+ ]
+}

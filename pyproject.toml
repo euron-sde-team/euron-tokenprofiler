@@ -1,0 +1,35 @@
+# Tooling configuration for the whole repository. Each Python package has its own pyproject.toml.
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["apps/console", "infra"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "ASYNC", "RUF", "S", "C4", "PT"]
+ignore = ["S101", "S311", "RUF012", "E501", "RUF002", "RUF003", "S603", "S607"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S", "B011", "PT018", "RUF029", "ASYNC210", "ASYNC220", "ASYNC251", "ASYNC240"]
+"scripts/**" = ["S"]
+# store.py builds SQL only from whitelisted dimension and metric names (see query.py); every value is a bound parameter.
+"packages/core/tokenprofiler_core/store.py" = ["S608"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["apps/console", "\\.venv"]
+explicit_package_bases = true
+mypy_path = ["packages/core", "packages/core/tests", "packages/sdk", "packages/sdk/tests", "apps/api", "apps/api/tests", "apps/mock-llm"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["packages/core/tests", "packages/sdk/tests", "apps/api/tests", "apps/mock-llm/tests"]
+markers = ["network: needs internet (compares against the real tiktoken tokenizers)"]
+addopts = "-q"
+
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*", "tiktoken.*"]
+ignore_missing_imports = true

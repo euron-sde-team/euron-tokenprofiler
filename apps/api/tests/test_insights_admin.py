@@ -399,3 +399,16 @@ async def test_retention_deletes_only_events_older_than_the_limit(stack: Stack) 
         and (await stack.api.get("/api/events/ancient")).status_code == 404
         and (await stack.api.get("/api/events/recent")).status_code == 200
     )
+
+
+async def test_a_dead_reports_bucket_is_a_clear_502_not_a_500(stack: Stack) -> None:
+    class Broken:
+        def put_object(self, **kw: Any) -> None:
+            raise ConnectionError("endpoint unreachable")
+
+    stack.state.s3 = Broken()
+    r = await stack.api.post("/api/reports/archive")
+    assert r.status_code == 502 and r.json()["error"]["code"] == "reports_unavailable"
+    assert (await get(stack, "/api/reports"))["data"] == [], (
+        "nothing is recorded for a report that was not written"
+    )

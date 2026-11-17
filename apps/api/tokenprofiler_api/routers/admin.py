@@ -214,13 +214,18 @@ async def archive_report(
         },
         indent=1,
     ).encode()
-    await asyncio.to_thread(
-        state.s3.put_object,
-        Bucket=state.settings.reports_bucket,
-        Key=key,
-        Body=body,
-        ContentType="application/json",
-    )
+    try:
+        await asyncio.to_thread(
+            state.s3.put_object,
+            Bucket=state.settings.reports_bucket,
+            Key=key,
+            Body=body,
+            ContentType="application/json",
+        )
+    except Exception as exc:
+        raise ApiError(
+            502, "reports_unavailable", f"the reports bucket could not be written ({type(exc).__name__})"
+        ) from exc
     await state.db.execute(
         "INSERT INTO reports (ts, period, bucket, key, bytes) VALUES (?,?,?,?,?)",
         time.time(),

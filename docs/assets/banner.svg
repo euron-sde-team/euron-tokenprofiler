@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-labelledby="t d">
+  <title id="t">Euron TokenProfiler</title>
+  <desc id="d">An open-source AI token analytics tool that tracks, analyzes and visualizes token consumption, API costs and usage patterns across models, prompts and applications</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b0d12"/><stop offset="1" stop-color="#19133a"/></linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#fff" stroke-opacity=".035"/></pattern>
+  </defs>
+  <rect width="1280" height="320" rx="16" fill="url(#bg)"/>
+  <rect width="1280" height="320" rx="16" fill="url(#grid)"/>
+  <g font-family="Inter, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+    <text x="72" y="140" fill="#f4f6fb" font-size="54" font-weight="650" letter-spacing="-1.2">Euron TokenProfiler</text>
+    <text x="74" y="186" fill="#9aa3b5" font-size="22">See where your tokens and dollars go, then spend less. Per model, prompt and app.</text>
+    <g font-family="JetBrains Mono, SFMono-Regular, Menlo, monospace" font-size="15" fill="#7d879b">
+      <text x="74" y="246">SDK + OpenAI proxy</text><text x="270" y="246">exact-to-the-micro-dollar costs</text>
+      <text x="560" y="246">budgets + anomalies</text><text x="770" y="246">savings optimizer</text><text x="950" y="246">Terraform + Floci</text>
+    </g>
+  </g>
+  <g transform="translate(1030 80)">
+    <rect x="0" y="0" width="170" height="170" rx="32" fill="#8b7dff"/>
+    <g fill="#0c0928"><rect x="32" y="84" width="24" height="54" rx="6"/><rect x="73" y="52" width="24" height="86" rx="6"/><rect x="114" y="30" width="24" height="108" rx="6"/></g>
+  </g>
+</svg>

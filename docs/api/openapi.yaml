@@ -1,0 +1,3614 @@
+openapi: 3.1.0
+info:
+  title: Euron TokenProfiler API
+  description: '
+
+    **Euron TokenProfiler** tracks, analyzes and visualizes token usage and cost across models, prompts
+    and applications.
+
+    Send usage with `POST /v1/events`, or route calls through the OpenAI-compatible `/proxy/v1`, then
+    read it back through
+
+    the analytics, optimizer and budget endpoints. Authenticate with `Authorization: Bearer <key>` or
+    `X-API-Key: <key>`.
+
+    '
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 0.1.0
+paths:
+  /v1/events:
+    post:
+      tags:
+      - ingest
+      summary: Record LLM usage events (batch)
+      operationId: post_events_v1_events_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventBatch'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/estimate:
+    post:
+      tags:
+      - ingest
+      summary: Estimate tokens and cost for a prompt, without storing anything
+      operationId: estimate_api_estimate_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstimateRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Estimate Api Estimate Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /proxy/v1/chat/completions:
+    post:
+      tags:
+      - proxy
+      summary: OpenAI-compatible chat completions, recorded
+      operationId: chat_proxy_v1_chat_completions_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /proxy/v1/embeddings:
+    post:
+      tags:
+      - proxy
+      summary: OpenAI-compatible embeddings, recorded
+      operationId: embeddings_proxy_v1_embeddings_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /proxy/v1/models:
+    get:
+      tags:
+      - proxy
+      summary: Pass-through model list
+      operationId: models_proxy_v1_models_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/overview:
+    get:
+      tags:
+      - analytics
+      summary: 'The headline numbers: spend, trend, forecast, top spenders'
+      operationId: overview_api_overview_get
+      parameters:
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Overview Api Overview Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/usage/summary:
+    get:
+      tags:
+      - analytics
+      summary: Metrics grouped by up to three dimensions
+      operationId: summary_api_usage_summary_get
+      parameters:
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          title: Group By
+      - name: metrics
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          title: Metrics
+      - name: order_by
+        in: query
+        required: false
+        schema:
+          type: string
+          default: cost
+          title: Order By
+      - name: desc
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+          title: Desc
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Summary Api Usage Summary Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/usage/timeseries:
+    get:
+      tags:
+      - analytics
+      summary: Metrics over time, optionally split by one dimension
+      operationId: timeseries_api_usage_timeseries_get
+      parameters:
+      - name: bucket
+        in: query
+        required: false
+        schema:
+          type: string
+          default: day
+          title: Bucket
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Group By
+      - name: metrics
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          title: Metrics
+      - name: top
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 12
+          minimum: 1
+          default: 6
+          title: Top
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Timeseries Api Usage Timeseries Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/usage/metrics:
+    get:
+      tags:
+      - analytics
+      summary: The names of the available metrics and dimensions
+      operationId: names_api_usage_metrics_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                title: Response Names Api Usage Metrics Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/dimensions/{dimension}:
+    get:
+      tags:
+      - analytics
+      summary: Distinct values of a dimension, for filter menus
+      operationId: dimension_api_dimensions__dimension__get
+      parameters:
+      - name: dimension
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dimension
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Dimension Api Dimensions  Dimension  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/latency:
+    get:
+      tags:
+      - analytics
+      summary: Latency percentiles, optionally per dimension
+      operationId: latency_api_latency_get
+      parameters:
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Group By
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Latency Api Latency Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/events:
+    get:
+      tags:
+      - analytics
+      summary: Recent events, newest first, with cursor pagination
+      operationId: events_api_events_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cursor
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Events Api Events Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/events/{event_id}:
+    get:
+      tags:
+      - analytics
+      summary: One event
+      operationId: event_api_events__event_id__get
+      parameters:
+      - name: event_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Event Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Event Api Events  Event Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/prompts:
+    get:
+      tags:
+      - analytics
+      summary: Prompt templates ranked by spend
+      operationId: prompts_api_prompts_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Prompts Api Prompts Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/prompts/{prompt_id}:
+    get:
+      tags:
+      - analytics
+      summary: 'One prompt template: model mix, trend, latency, errors'
+      operationId: prompt_detail_api_prompts__prompt_id__get
+      parameters:
+      - name: prompt_id
+        in: path
+        required: true
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Prompt Detail Api Prompts  Prompt Id  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/models/compare:
+    get:
+      tags:
+      - analytics
+      summary: 'What this traffic would have cost on every other model (cost only: quality differs)'
+      operationId: compare_models_api_models_compare_get
+      parameters:
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Compare Models Api Models Compare Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/anomalies:
+    get:
+      tags:
+      - analytics
+      summary: Days whose spend departs from the recent baseline
+      operationId: anomalies_api_anomalies_get
+      parameters:
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          type: string
+          default: app
+          title: Group By
+      - name: threshold
+        in: query
+        required: false
+        schema:
+          type: number
+          maximum: 10
+          minimum: 2
+          default: 3.5
+          title: Threshold
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Anomalies Api Anomalies Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/recommendations:
+    get:
+      tags:
+      - insights
+      summary: Specific, quantified ways to cut spend, from your real usage
+      operationId: recommendations_api_recommendations_get
+      parameters:
+      - name: include_dismissed
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Dismissed
+      - name: window_days
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 180
+          minimum: 3
+          default: 30
+          title: Window Days
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Recommendations Api Recommendations Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/recommendations/{rec_id}/dismiss:
+    post:
+      tags:
+      - insights
+      summary: Hide a recommendation you have decided against
+      operationId: dismiss_api_recommendations__rec_id__dismiss_post
+      parameters:
+      - name: rec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Rec Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - insights
+      summary: Bring a dismissed recommendation back
+      operationId: restore_api_recommendations__rec_id__dismiss_delete
+      parameters:
+      - name: rec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Rec Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/alerts:
+    get:
+      tags:
+      - insights
+      summary: Budget and anomaly alerts, newest first
+      operationId: list_alerts_api_alerts_get
+      parameters:
+      - name: include_acknowledged
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Acknowledged
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Alerts Api Alerts Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/alerts/{alert_id}/ack:
+    post:
+      tags:
+      - insights
+      summary: Acknowledge an alert
+      operationId: ack_api_alerts__alert_id__ack_post
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Alert Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/alerts/evaluate:
+    post:
+      tags:
+      - insights
+      summary: Evaluate budgets and anomalies now
+      operationId: evaluate_now_api_alerts_evaluate_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                title: Response Evaluate Now Api Alerts Evaluate Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/budgets:
+    get:
+      tags:
+      - insights
+      summary: Budgets with live status and forecast
+      operationId: list_budgets_api_budgets_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Budgets Api Budgets Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - insights
+      summary: Create a monthly budget
+      operationId: create_budget_api_budgets_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Create Budget Api Budgets Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/budgets/{budget_id}:
+    put:
+      tags:
+      - insights
+      summary: Replace a budget
+      operationId: update_budget_api_budgets__budget_id__put
+      parameters:
+      - name: budget_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Budget Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Update Budget Api Budgets  Budget Id  Put
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - insights
+      summary: Delete a budget
+      operationId: delete_budget_api_budgets__budget_id__delete
+      parameters:
+      - name: budget_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Budget Id
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/pricing:
+    get:
+      tags:
+      - admin
+      summary: The price book (built-in prices plus your overrides)
+      operationId: list_prices_api_pricing_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Prices Api Pricing Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/pricing/unpriced:
+    get:
+      tags:
+      - admin
+      summary: Models seen in your traffic that have no price
+      operationId: unpriced_api_pricing_unpriced_get
+      parameters:
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Unpriced Api Pricing Unpriced Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/pricing/{model}:
+    put:
+      tags:
+      - admin
+      summary: Set or override a model's price
+      operationId: set_price_api_pricing__model__put
+      parameters:
+      - name: model
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Model
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Set Price Api Pricing  Model  Put
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - admin
+      summary: Remove an override (a built-in price comes back)
+      operationId: delete_price_api_pricing__model__delete
+      parameters:
+      - name: model
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Model
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/pricing/reprice:
+    post:
+      tags:
+      - admin
+      summary: Recompute stored costs for a model from its current price
+      operationId: reprice_api_pricing_reprice_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+              title: Body
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Reprice Api Pricing Reprice Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/prompts/analyze:
+    post:
+      tags:
+      - admin
+      summary: 'Prompt Lab: token breakdown, waste, and what it costs on each model'
+      operationId: analyze_prompt_api_prompts_analyze_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Analyze Prompt Api Prompts Analyze Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/export/events:
+    get:
+      tags:
+      - admin
+      summary: Download events as CSV or JSON Lines
+      operationId: export_events_api_export_events_get
+      parameters:
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^(csv|jsonl)$
+          default: csv
+          title: Format
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000000
+          minimum: 1
+          default: 100000
+          title: Limit
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/reports/archive:
+    post:
+      tags:
+      - admin
+      summary: Archive a usage report (JSON) to the S3 reports bucket
+      operationId: archive_report_api_reports_archive_post
+      parameters:
+      - name: label
+        in: query
+        required: false
+        schema:
+          type: string
+          default: manual
+          title: Label
+      - name: range
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+          default: 30d
+          title: Range
+        description: 'Look-back window: 1h 6h 24h 7d 14d 30d 90d 180d 365d'
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms; overrides range
+          title: Since
+        description: Epoch ms; overrides range
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Epoch ms, exclusive
+          title: Until
+        description: Epoch ms, exclusive
+      - name: app
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: App
+      - name: environment
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Environment
+      - name: model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+      - name: provider
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider
+      - name: endpoint
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+      - name: prompt_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Prompt Id
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          description: Repeatable key:value tag filter
+          title: Tag
+        description: Repeatable key:value tag filter
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Archive Report Api Reports Archive Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/reports:
+    get:
+      tags:
+      - admin
+      summary: Archived reports
+      operationId: list_reports_api_reports_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Reports Api Reports Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/keys:
+    get:
+      tags:
+      - admin
+      summary: API keys (never the secrets)
+      operationId: list_keys_api_keys_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Keys Api Keys Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - admin
+      summary: Create an API key. The secret is shown once.
+      operationId: create_key_api_keys_post
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreated'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/keys/{prefix}:
+    delete:
+      tags:
+      - admin
+      summary: Revoke an API key
+      operationId: revoke_key_api_keys__prefix__delete
+      parameters:
+      - name: prefix
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Prefix
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/system:
+    get:
+      tags:
+      - admin
+      summary: Version, storage and feature flags
+      operationId: system_api_system_get
+      parameters:
+      - name: authorization
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      - name: x-api-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Api-Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response System Api System Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /healthz:
+    get:
+      tags:
+      - ops
+      summary: Liveness
+      operationId: healthz_healthz_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+                title: Response Healthz Healthz Get
+  /readyz:
+    get:
+      tags:
+      - ops
+      summary: 'Readiness: both databases usable'
+      operationId: readyz_readyz_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Readyz Readyz Get
+  /metrics:
+    get:
+      tags:
+      - ops
+      summary: Prometheus metrics
+      operationId: metrics_endpoint_metrics_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    AnalyzeRequest:
+      properties:
+        text:
+          anyOf:
+          - type: string
+            maxLength: 400000
+          - type: 'null'
+          title: Text
+        messages:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+            maxItems: 500
+          - type: 'null'
+          title: Messages
+        model:
+          type: string
+          title: Model
+          default: gpt-4o
+        expected_completion_tokens:
+          type: integer
+          maximum: 1000000.0
+          minimum: 0.0
+          title: Expected Completion Tokens
+          default: 300
+        requests_per_month:
+          type: integer
+          maximum: 10000000000.0
+          minimum: 1.0
+          title: Requests Per Month
+          default: 10000
+      additionalProperties: false
+      type: object
+      title: AnalyzeRequest
+    ApiKeyCreated:
+      properties:
+        prefix:
+          type: string
+          title: Prefix
+        name:
+          type: string
+          title: Name
+        scopes:
+          items:
+            type: string
+          type: array
+          title: Scopes
+        apps:
+          items:
+            type: string
+          type: array
+          title: Apps
+          description: Empty means every app
+        created_at:
+          type: number
+          title: Created At
+        last_used_at:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Last Used At
+        revoked:
+          type: boolean
+          title: Revoked
+          default: false
+        key:
+          type: string
+          title: Key
+          description: Shown once. Store it safely.
+      type: object
+      required:
+      - prefix
+      - name
+      - scopes
+      - created_at
+      - key
+      title: ApiKeyCreated
+    BudgetIn:
+      properties:
+        name:
+          type: string
+          title: Name
+        limit_usd:
+          type: number
+          maximum: 100000000.0
+          exclusiveMinimum: 0.0
+          title: Limit Usd
+          description: Monthly limit in USD
+        scope:
+          additionalProperties:
+            type: string
+          type: object
+          title: Scope
+          description: 'Filter the budget applies to, e.g. {''app'': ''support-bot''}; empty = everything'
+        warn_at:
+          type: number
+          exclusiveMaximum: 1.0
+          exclusiveMinimum: 0.0
+          title: Warn At
+          description: Fraction of the limit that raises a warning
+          default: 0.8
+        webhook_url:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Webhook Url
+          description: POSTed to when the budget crosses a threshold
+      type: object
+      required:
+      - name
+      - limit_usd
+      title: BudgetIn
+    EstimateRequest:
+      properties:
+        model:
+          type: string
+          title: Model
+          default: gpt-4o
+        text:
+          anyOf:
+          - type: string
+            maxLength: 1000000
+          - type: 'null'
+          title: Text
+        messages:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+            maxItems: 2000
+          - type: 'null'
+          title: Messages
+        expected_completion_tokens:
+          type: integer
+          maximum: 10000000.0
+          minimum: 0.0
+          title: Expected Completion Tokens
+          default: 0
+        requests:
+          type: integer
+          maximum: 1000000000.0
+          minimum: 1.0
+          title: Requests
+          default: 1
+      additionalProperties: false
+      type: object
+      title: EstimateRequest
+    EventBatch:
+      properties:
+        events:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          minItems: 1
+          title: Events
+          description: Each item is validated on its own; one bad event does not reject the rest
+      additionalProperties: false
+      type: object
+      required:
+      - events
+      title: EventBatch
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    IngestResult:
+      properties:
+        accepted:
+          type: integer
+          title: Accepted
+        duplicates:
+          type: integer
+          title: Duplicates
+        rejected:
+          type: integer
+          title: Rejected
+        errors:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Errors
+          description: Index and reason for each rejected event (first 50)
+      type: object
+      required:
+      - accepted
+      - duplicates
+      - rejected
+      title: IngestResult
+    KeyIn:
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Name
+        scopes:
+          items:
+            type: string
+          type: array
+          minItems: 1
+          title: Scopes
+        apps:
+          items:
+            type: string
+          type: array
+          title: Apps
+          description: Limit the key to these apps; empty means all
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: KeyIn
+    PriceIn:
+      properties:
+        provider:
+          type: string
+          title: Provider
+          default: custom
+        input:
+          type: number
+          maximum: 100000.0
+          minimum: 0.0
+          title: Input
+          description: USD per 1M input tokens
+        output:
+          type: number
+          maximum: 100000.0
+          minimum: 0.0
+          title: Output
+        cached_input:
+          anyOf:
+          - type: number
+            maximum: 100000.0
+            minimum: 0.0
+          - type: 'null'
+          title: Cached Input
+        cache_write:
+          anyOf:
+          - type: number
+            maximum: 100000.0
+            minimum: 0.0
+          - type: 'null'
+          title: Cache Write
+        context:
+          anyOf:
+          - type: integer
+            minimum: 1.0
+          - type: 'null'
+          title: Context
+        batch_discount:
+          anyOf:
+          - type: number
+            maximum: 1.0
+            minimum: 0.0
+          - type: 'null'
+          title: Batch Discount
+        cheaper:
+          anyOf:
+          - type: string
+            maxLength: 120
+          - type: 'null'
+          title: Cheaper
+      additionalProperties: false
+      type: object
+      required:
+      - input
+      - output
+      title: PriceIn
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+tags:
+- name: ingest
+  description: Record usage events; estimate tokens and cost
+- name: proxy
+  description: OpenAI-compatible proxy that records every call
+- name: analytics
+  description: Spend, tokens, latency, prompts, models, anomalies
+- name: insights
+  description: Optimizer recommendations, budgets and alerts
+- name: admin
+  description: Pricing, the Prompt Lab, exports, reports, API keys
+- name: ops
+  description: Health and Prometheus metrics

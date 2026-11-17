@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="540" viewBox="0 0 1100 540" role="img" aria-labelledby="t">
+  <title id="t">TokenProfiler architecture</title>
+  <style>
+    text{font-family:Inter,-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;fill:#e8ebf2}
+    .m{font-family:JetBrains Mono,Menlo,monospace;font-size:12px;fill:#9aa3b5}
+    .box{fill:#11141b;stroke:#262b36;stroke-width:1.5}
+    .acc{fill:#19133a;stroke:#8b7dff;stroke-width:1.5}
+    .ln{stroke:#6b7486;stroke-width:1.5;fill:none;marker-end:url(#a)}
+    .h{font-weight:600;font-size:15px}
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6b7486"/></marker></defs>
+  <rect width="1100" height="540" rx="14" fill="#0b0d12"/>
+  <rect class="box" x="40" y="40" width="190" height="76" rx="10"/><text class="h" x="135" y="72" text-anchor="middle">Your apps</text><text class="m" x="135" y="94" text-anchor="middle">Python SDK wrappers</text>
+  <rect class="box" x="40" y="160" width="190" height="76" rx="10"/><text class="h" x="135" y="192" text-anchor="middle">Any language</text><text class="m" x="135" y="214" text-anchor="middle">OpenAI SDK via proxy</text>
+  <rect class="box" x="40" y="280" width="190" height="76" rx="10"/><text class="h" x="135" y="312" text-anchor="middle">Console</text><text class="m" x="135" y="334" text-anchor="middle">Next.js, read key</text>
+  <rect class="acc" x="320" y="30" width="430" height="400" rx="14"/>
+  <text class="h" x="535" y="62" text-anchor="middle">API (FastAPI, one process)</text>
+  <rect class="box" x="344" y="84" width="180" height="62" rx="8"/><text x="434" y="110" text-anchor="middle">/v1/events ingest</text><text class="m" x="434" y="130" text-anchor="middle">idempotent by id</text>
+  <rect class="box" x="546" y="84" width="180" height="62" rx="8"/><text x="636" y="110" text-anchor="middle">/proxy/v1 profiler</text><text class="m" x="636" y="130" text-anchor="middle">records, never blocks</text>
+  <rect class="box" x="344" y="166" width="180" height="62" rx="8"/><text x="434" y="192" text-anchor="middle">Price book</text><text class="m" x="434" y="212" text-anchor="middle">integer micro-dollars</text>
+  <rect class="box" x="546" y="166" width="180" height="62" rx="8"/><text x="636" y="192" text-anchor="middle">Token estimator</text><text class="m" x="636" y="212" text-anchor="middle">flagged estimated</text>
+  <rect class="box" x="344" y="248" width="180" height="62" rx="8"/><text x="434" y="274" text-anchor="middle">Analytics</text><text class="m" x="434" y="294" text-anchor="middle">query, forecast, anomalies</text>
+  <rect class="box" x="546" y="248" width="180" height="62" rx="8"/><text x="636" y="274" text-anchor="middle">Optimizer</text><text class="m" x="636" y="294" text-anchor="middle">8 rules, capped potential</text>
+  <rect class="box" x="344" y="330" width="180" height="62" rx="8"/><text x="434" y="356" text-anchor="middle">Budgets + alerts</text><text class="m" x="434" y="376" text-anchor="middle">webhooks, SSRF-guarded</text>
+  <rect class="box" x="546" y="330" width="180" height="62" rx="8"/><text x="636" y="356" text-anchor="middle">Auth</text><text class="m" x="636" y="376" text-anchor="middle">scoped keys, app allow-lists</text>
+  <rect class="box" x="840" y="40" width="220" height="76" rx="10"/><text class="h" x="950" y="72" text-anchor="middle">usage.db (SQLite)</text><text class="m" x="950" y="94" text-anchor="middle">events, WAL</text>
+  <rect class="box" x="840" y="150" width="220" height="76" rx="10"/><text class="h" x="950" y="182" text-anchor="middle">control.db (SQLite)</text><text class="m" x="950" y="204" text-anchor="middle">keys, budgets, alerts</text>
+  <rect class="box" x="840" y="260" width="220" height="76" rx="10"/><text class="h" x="950" y="292" text-anchor="middle">LLM provider</text><text class="m" x="950" y="314" text-anchor="middle">OpenAI-compatible</text>
+  <rect class="box" x="840" y="370" width="220" height="76" rx="10"/><text class="h" x="950" y="402" text-anchor="middle">S3 + Secrets Manager</text><text class="m" x="950" y="424" text-anchor="middle">Floci locally, AWS in prod</text>
+  <path class="ln" d="M230 78H320"/><path class="ln" d="M230 198L320 112"/><path class="ln" d="M230 318L320 290"/>
+  <path class="ln" d="M750 100H840"/><path class="ln" d="M750 200H840"/><path class="ln" d="M726 115L840 290"/><path class="ln" d="M750 380H840"/>
+  <text class="m" x="40" y="500">Money is integer micro-dollars everywhere. Reads are scoped to the key's apps.</text>
+</svg>

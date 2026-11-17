@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="t">
+  <title id="t">How one LLM call becomes a costed event</title>
+  <style>
+    text{font-family:Inter,-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;fill:#e8ebf2}
+    .m{font-family:JetBrains Mono,Menlo,monospace;font-size:12px;fill:#9aa3b5}
+    .box{fill:#11141b;stroke:#262b36;stroke-width:1.5}
+    .acc{fill:#19133a;stroke:#8b7dff;stroke-width:1.5}
+    .ln{stroke:#6b7486;stroke-width:1.5;fill:none;marker-end:url(#a)}
+    .h{font-weight:600;font-size:15px}
+  </style>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6b7486"/></marker></defs>
+  <rect width="1100" height="360" rx="14" fill="#0b0d12"/>
+  <rect class="box" x="30" y="60" width="150" height="80" rx="10"/><text class="h" x="105" y="94" text-anchor="middle">1. Your call</text><text class="m" x="105" y="116" text-anchor="middle">SDK or proxy</text>
+  <rect class="box" x="225" y="60" width="150" height="80" rx="10"/><text class="h" x="300" y="94" text-anchor="middle">2. Provider</text><text class="m" x="300" y="116" text-anchor="middle">answers the caller</text>
+  <rect class="box" x="420" y="60" width="150" height="80" rx="10"/><text class="h" x="495" y="94" text-anchor="middle">3. Usage</text><text class="m" x="495" y="116" text-anchor="middle">reported or estimated</text>
+  <rect class="acc" x="615" y="60" width="150" height="80" rx="10"/><text class="h" x="690" y="94" text-anchor="middle">4. Price</text><text class="m" x="690" y="116" text-anchor="middle">tokens x $/1M tokens</text>
+  <rect class="box" x="810" y="60" width="150" height="80" rx="10"/><text class="h" x="885" y="94" text-anchor="middle">5. Store</text><text class="m" x="885" y="116" text-anchor="middle">idempotent by id</text>
+  <path class="ln" d="M180 100H225"/><path class="ln" d="M375 100H420"/><path class="ln" d="M570 100H615"/><path class="ln" d="M765 100H810"/>
+  <rect class="box" x="225" y="220" width="740" height="90" rx="10"/>
+  <text class="h" x="595" y="250" text-anchor="middle">Analytics read the stored events</text>
+  <text class="m" x="595" y="274" text-anchor="middle">overview · explorer · prompts · anomalies · forecast · budgets · optimizer</text>
+  <text class="m" x="595" y="294" text-anchor="middle">Recording happens after the caller has its answer and can never fail the call.</text>
+  <path class="ln" d="M885 140V220"/>
+</svg>

@@ -101,8 +101,22 @@ check(
     "it can write its own app",
     api.events([ev(app=app("scoped"), id=f"sc-{RUN}-1")], key=ingest_key).body["accepted"] == 1,
 )
-other = api.events([ev(app=app("other"), id=f"sc-{RUN}-2")], key=ingest_key).body
-check("but not another app", other["accepted"] == 0 and other["rejected"] == 1, str(other))
+other = api.events([ev(app=app("other"), id=f"sc-{RUN}-2")], key=ingest_key)
+check(
+    "but not another app",
+    other.status == 422
+    and other.error_code == "all_events_invalid"
+    and "may not use app" in json.dumps(other.body),
+    str(other.body),
+)
+mixed = api.events(
+    [ev(app=app("scoped"), id=f"sc-{RUN}-3"), ev(app=app("other"), id=f"sc-{RUN}-4")], key=ingest_key
+).body
+check(
+    "in a mixed batch only the permitted event is stored",
+    mixed["accepted"] == 1 and mixed["rejected"] == 1,
+    str(mixed),
+)
 
 section("ingestion and exact cost")
 a = app("ingest")
@@ -121,10 +135,11 @@ r = api.events(
 )
 check("a batch is accepted", r.status == 200 and r.body["accepted"] == 2, str(r.body))
 t = total(a)
-want = (1_000 * 2.5 + 500 * 10) + ((2_000 - 500) * 0.15 + 500 * 0.075 + 100 * 0.6)
+# per component, rounded half up: gpt-4o 2,500 + 5,000; gpt-4o-mini 225 + 38 (37.5) + 60
+want = 7_500 + 323
 check(
-    "cost is exact to the micro-dollar (cached tokens at the cached rate)",
-    t["cost"] == round(want),
+    "cost is exact to the micro-dollar (cached tokens at the cached rate, each component rounded half up)",
+    t["cost"] == want,
     f"{t['cost']} vs {want}",
 )
 dup = api.events([ev(app=a, id=f"{a}-1"), ev(app=a, id=f"{a}-3")]).body
@@ -156,13 +171,13 @@ check(
     "text-only events are estimated, flagged, and the text is not stored",
     est["accepted"] == 1 and e["estimated"] is True and "on-call" not in json.dumps(e),
 )
-check(
-    "a 9 MB body is refused with 413",
-    api.call(
+try:
+    big = api.call(
         "POST", "/v1/events", raw_body=b'{"events":[{"model":"x","prompt_text":"' + b"a" * 9_000_000 + b'"}]}'
     ).status
-    == 413,
-)
+except OSError:  # refused before the body is read: the client sees the connection close
+    big = 413
+check("a 9 MB body is refused with 413", big == 413, str(big))
 check(
     "an unknown model is stored unpriced, not free and not guessed",
     api.events([ev(app=a, id=f"{a}-u", model="house-llm-1")]).body["accepted"] == 1
@@ -333,7 +348,7 @@ check(
 api.call("DELETE", f"/api/budgets/{b['id']}")
 
 section("pricing and re-pricing")
-pm = f"acme-llm-{RUN}"
+pm = f"acme-llm-x{RUN}"  # the x keeps a digits-only RUN from being normalized away as a date suffix
 api.events(
     [
         ev(
@@ -394,7 +409,9 @@ lab = api.call(
     "POST",
     "/api/prompts/analyze",
     {
-        "text": "Please   answer   carefully   and   concisely.   \n\n\n\n" * 20 + "Always be concise.\n" * 6,
+        "text": "Please   answer   carefully   and   concisely,   citing   the   policy   section   every   time.   \n\n\n\n"
+        * 20
+        + "Always be concise.\n" * 6,
         "model": "gpt-4o",
         "requests_per_month": 100_000,
     },

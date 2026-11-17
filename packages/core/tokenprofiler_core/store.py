@@ -313,6 +313,44 @@ class UsageStore:
         )
         return [dict(r) for r in rows]
 
+    def first_ts(self, f: Filters) -> int | None:
+        """The timestamp of the earliest event matching the filters, or None when there are none."""
+        where, params = f.where()
+        lo = self._all(f"SELECT MIN(ts) AS lo FROM events{where}", params)[0]["lo"]
+        return int(lo) if lo is not None else None
+
+    def workload_shape(self, f: Filters) -> dict[str, int]:
+        """How interactive the matching traffic looks: calls with no end user, non-streaming calls, batch calls."""
+        where, params = f.where()
+        r = self._all(
+            f"SELECT COUNT(*) AS n, COALESCE(SUM(user_id IS NULL), 0) AS no_user, COALESCE(SUM(stream = 0), 0) AS no_stream, "
+            f"COALESCE(SUM(batch = 1), 0) AS batch FROM events{where}",
+            params,
+        )[0]
+        return {k: int(r[k]) for k in ("n", "no_user", "no_stream", "batch")}
+
+    def template_stats(self, f: Filters, limit: int = 500) -> list[dict[str, Any]]:
+        """Per (app, model, prompt template): volume, prompt-size spread and how much is already served from the prompt cache."""
+        where, params = f.where()
+        where = (where + " AND " if where else " WHERE ") + "status = 'ok' AND cache_hit = 0"
+        rows = self._all(
+            f"SELECT app, model, COALESCE(prompt_id, '(none)') AS prompt_id, COUNT(*) AS requests, MIN(prompt_tokens) AS min_prompt, "
+            f"AVG(prompt_tokens) AS avg_prompt, AVG(completion_tokens) AS avg_completion, SUM(prompt_tokens) AS prompt_tokens, "
+            f"SUM(cached_tokens) AS cached_tokens, SUM(completion_tokens) AS completion_tokens, SUM(cost_total) AS cost, "
+            f"MIN(ts) AS first_ts, MAX(ts) AS last_ts FROM events{where} GROUP BY app, model, prompt_id ORDER BY cost DESC LIMIT ?",
+            [*params, limit],
+        )
+        return [dict(r) for r in rows]
+
+    def session_calls(self, f: Filters, limit: int = 200_000) -> list[sqlite3.Row]:
+        """(session, app, model, ts, prompt_tokens, cost) rows for calls that belong to a session, in session order."""
+        where, params = f.where()
+        where = (where + " AND " if where else " WHERE ") + "session_id IS NOT NULL AND status = 'ok'"
+        return self._all(
+            f"SELECT session_id, app, model, ts, prompt_tokens, cost_total FROM events{where} ORDER BY session_id, ts LIMIT ?",
+            [*params, limit],
+        )
+
     def close(self) -> None:
         with self._lock:
             self._conn.close()

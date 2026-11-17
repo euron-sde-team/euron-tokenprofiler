@@ -1,0 +1,56 @@
+# Overlay: emulated AWS with Floci (https://github.com/floci-io/floci, MIT).
+# The SAME Terraform modules that build AWS run here against the emulator: the `terraform` one-shot applies
+# infra/terraform/envs/local-floci before the API starts. The API then reads its secrets from Secrets Manager and archives
+# usage reports to S3, with the real AWS SDK.
+x-floci-env: &floci-env
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  TP_AWS_REGION: us-east-1
+  TP_AWS_ENDPOINT_URL: http://floci:4566
+  TP_SECRETS_ARN: tokenprofiler-local/app
+  TP_REPORTS_BUCKET: tokenprofiler-local-reports
+
+services:
+  floci:
+    image: floci/floci:2.3.0
+    environment:
+      FLOCI_HOSTNAME: floci
+      FLOCI_DEFAULT_REGION: us-east-1
+    ports: ["127.0.0.1:${TP_FLOCI_PORT:-4866}:4566"]
+
+  terraform:
+    image: hashicorp/terraform:1.16.6
+    working_dir: /infra/envs/local-floci
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "waiting for floci..."
+        until wget -q -O /dev/null http://floci:4566/; do sleep 1; done
+        # Offline-first: install providers from the local cache when present, so `make up` works without network
+        # after the first run. Only a cold cache goes to the registry.
+        terraform init -input=false -no-color -plugin-dir=/plugin-cache >/dev/null 2>&1 \
+          || terraform init -input=false -no-color >/dev/null
+        terraform apply -input=false -auto-approve -no-color \
+          -var endpoint=http://floci:4566 -var "bootstrap_api_key=$$TP_BOOTSTRAP_API_KEY"
+        terraform output -no-color
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      TP_BOOTSTRAP_API_KEY: ${TP_BOOTSTRAP_API_KEY:?run `make env` first}
+      TF_IN_AUTOMATION: "1"
+      TF_PLUGIN_CACHE_DIR: /plugin-cache
+    volumes:
+      - ../../infra/terraform:/infra
+      - tfplugins:/plugin-cache
+    depends_on: [floci]
+
+  api:
+    environment: *floci-env
+    depends_on:
+      terraform: { condition: service_completed_successfully }
+
+volumes:
+  tfplugins:

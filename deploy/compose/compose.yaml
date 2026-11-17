@@ -1,0 +1,41 @@
+# Base stack: the API, a mock LLM provider for the proxy, and the console. Overlay compose.floci.yaml adds the AWS emulator.
+# Data (two SQLite databases) lives in the `data` volume, so it survives restarts.
+name: euron-tokenprofiler
+
+x-tp-env: &tp-env
+  TP_API_KEY_PEPPER: ${TP_API_KEY_PEPPER:?run `make env` first}
+  TP_BOOTSTRAP_API_KEY: ${TP_BOOTSTRAP_API_KEY:?run `make env` first}
+  TP_UPSTREAM_BASE_URL: ${TP_UPSTREAM_BASE_URL:-http://mock-llm:8390/v1}
+  TP_UPSTREAM_API_KEY: ${TP_UPSTREAM_API_KEY:-}
+  TP_ALERT_INTERVAL_S: ${TP_ALERT_INTERVAL_S:-30}
+  TP_CORS_ORIGINS: http://localhost:${TP_CONSOLE_PORT:-3300},http://127.0.0.1:${TP_CONSOLE_PORT:-3300}
+
+services:
+  mock-llm:
+    build: { context: ../.., dockerfile: infra/docker/mock-llm.Dockerfile }
+    environment:
+      MOCK_LATENCY_MS: ${MOCK_LATENCY_MS:-120}
+    ports: ["127.0.0.1:${TP_MOCK_PORT:-8390}:8390"]
+    restart: unless-stopped
+
+  api:
+    build: { context: ../.., dockerfile: infra/docker/api.Dockerfile }
+    environment: *tp-env
+    ports: ["${TP_API_PORT:-8380}:8380"]
+    volumes: [data:/data]
+    depends_on: [mock-llm]
+    restart: unless-stopped
+
+  console:
+    build:
+      context: ../..
+      dockerfile: infra/docker/console.Dockerfile
+      args:
+        NEXT_PUBLIC_TP_API_URL: http://localhost:${TP_API_PORT:-8380}
+        NEXT_PUBLIC_TP_DEFAULT_API_KEY: ${TP_BOOTSTRAP_API_KEY:-}
+    ports: ["${TP_CONSOLE_PORT:-3300}:3300"]
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  data:

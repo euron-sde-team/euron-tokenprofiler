@@ -195,9 +195,14 @@ def test_span_times_a_block_and_records_the_response(server: Collector) -> None:
     with tp.span("gpt-4o", prompt_id="s1") as s:
         time.sleep(0.02)
         s.record(openai_response(300, 40, cached=100, finish="length"))
-    with pytest.raises(RuntimeError), tp.span("gpt-4o") as s2:
-        s2.set(prompt_tokens=500)
-        raise RuntimeError("provider blew up")
+
+    def failing_call() -> None:
+        with tp.span("gpt-4o") as s2:
+            s2.set(prompt_tokens=500)
+            raise RuntimeError("provider blew up")
+
+    with pytest.raises(RuntimeError):
+        failing_call()
     tp.flush()
     ok, bad = server.events
     assert (
@@ -243,7 +248,7 @@ def test_the_wrapper_returns_the_same_object_and_records_usage(server: Collector
         e["max_tokens"],
         e["temperature"],
         e["finish_reason"],
-        e["status"] if "status" in e else "ok",
+        e.get("status", "ok"),
     ) == ("gpt-4o-2024-08-06", 100, 20, "greeting", "u1", 64, 0.2, "stop", "ok")
     tp.close()
 

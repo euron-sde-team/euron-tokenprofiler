@@ -54,8 +54,8 @@ export default function ExplorerPage() {
       <PageHeader title="Explorer" description="Slice usage by any dimension: app, model, prompt, user, error type, or your own tags."
         actions={<><FilterBar /><Button onClick={download} loading={busy} aria-label="Export CSV"><Download className="size-3.5" />Export CSV</Button></>} />
       <div className="mb-4 flex flex-wrap gap-3">
-        <Field label="Group by"><Select value={by} onChange={(e) => set({ by: e.target.value })} aria-label="Group by" className="w-44">{DIMS.map((d) => <option key={d} value={d}>{d}</option>)}</Select></Field>
-        <Field label="Chart"><Select value={metric.id} onChange={(e) => set({ metric: e.target.value })} aria-label="Metric" className="w-44">{METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</Select></Field>
+        <Field label="Group by"><Select value={by} onChange={(e) => set({ by: e.target.value })} aria-label="Group by" className="!w-44">{DIMS.map((d) => <option key={d} value={d}>{d}</option>)}</Select></Field>
+        <Field label="Chart"><Select value={metric.id} onChange={(e) => set({ metric: e.target.value })} aria-label="Metric" className="!w-44">{METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</Select></Field>
       </div>
       {rows.isError && <ErrorBanner error={rows.error} onRetry={() => void rows.refetch()} />}
       <div className="grid gap-5 lg:grid-cols-3">

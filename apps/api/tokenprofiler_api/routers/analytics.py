@@ -77,7 +77,7 @@ async def _overview(state: State, f: Filters) -> dict[str, Any]:
         },
         "today_micro": next((int(r["cost"]) for r in daily if r["day"] == today), 0),
         "top_models": models, "top_apps": apps, "top_prompts": prompts,
-        "recent_anomalies": [{"day": a.day, "value_micro": a.value, "expected_micro": a.expected, "ratio": round(a.ratio, 2), "direction": a.direction} for a in anomalies[-3:]],
+        "recent_anomalies": [{"day": a.day, "value_micro": a.value, "expected_micro": a.expected, "ratio": round(a.ratio, 2), "direction": a.direction} for a in [x for x in anomalies if x.direction == "spike"][-3:]],
         "bounds": await _q(state.usage.bounds), "prices_as_of": state.prices.as_of,
     }  # fmt: skip
 

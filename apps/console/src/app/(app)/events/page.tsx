@@ -31,7 +31,7 @@ export default function EventsPage() {
   return (
     <>
       <PageHeader title="Events" description="Every recorded call, newest first. Click one for the full picture." actions={<>
-        <Select aria-label="Status" value={status ?? ""} onChange={(e) => set({ status: e.target.value || null })} className="w-36"><option value="">All statuses</option><option value="ok">Succeeded</option><option value="error">Failed</option></Select>
+        <Select aria-label="Status" value={status ?? ""} onChange={(e) => set({ status: e.target.value || null })} className="!w-36"><option value="">All statuses</option><option value="ok">Succeeded</option><option value="error">Failed</option></Select>
         <FilterBar /></>} />
       {q.isError && <ErrorBanner error={q.error} onRetry={() => void q.refetch()} />}
       <section className="card overflow-hidden" aria-label="Events">

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,13 +15,14 @@ def client() -> TestClient:
     return TestClient(create_app(latency_ms=0))
 
 
-def chat(client: TestClient, content: str, **extra: object) -> dict:
+def chat(client: TestClient, content: str, **extra: object) -> dict[str, Any]:
     r = client.post(
         "/v1/chat/completions",
         json={"model": "gpt-4o", "messages": [{"role": "user", "content": content}], **extra},
     )
     assert r.status_code == 200, r.text
-    return r.json()
+    out: dict[str, Any] = r.json()
+    return out
 
 
 def test_reports_usage_that_adds_up(client: TestClient) -> None:
@@ -37,10 +39,14 @@ def test_the_same_prompt_gets_the_same_answer(client: TestClient) -> None:
 
 
 def test_a_failure_trigger_returns_the_error_and_a_rate_trigger_a_429(client: TestClient) -> None:
-    body = {"model": "gpt-4o", "messages": [{"role": "user", "content": "x [fail]"}]}
-    assert client.post("/v1/chat/completions", json=body).status_code == 500
-    body["messages"][0]["content"] = "x [rate]"
-    assert client.post("/v1/chat/completions", json=body).status_code == 429
+    def post(text: str) -> int:
+        r = client.post(
+            "/v1/chat/completions", json={"model": "gpt-4o", "messages": [{"role": "user", "content": text}]}
+        )
+        return int(r.status_code)
+
+    assert post("x [fail]") == 500
+    assert post("x [rate]") == 429
     assert client.post("/v1/chat/completions", json={"model": "gpt-4o"}).status_code == 400
 
 
@@ -50,7 +56,10 @@ def test_length_trigger_truncates(client: TestClient) -> None:
 
 def test_a_long_repeated_prefix_is_reported_as_cached_the_second_time(client: TestClient) -> None:
     system = "You are a careful assistant. " * 400
-    msgs = lambda q: [{"role": "system", "content": system}, {"role": "user", "content": q}]  # noqa: E731
+
+    def msgs(q: str) -> list[dict[str, str]]:
+        return [{"role": "system", "content": system}, {"role": "user", "content": q}]
+
     first = client.post("/v1/chat/completions", json={"model": "gpt-4o", "messages": msgs("one")}).json()[
         "usage"
     ]
@@ -62,8 +71,12 @@ def test_a_long_repeated_prefix_is_reported_as_cached_the_second_time(client: Te
 
 
 def test_streaming_ends_with_a_usage_chunk_when_asked(client: TestClient) -> None:
-    def stream(opts: dict | None) -> list[dict]:
-        body = {"model": "gpt-4o", "stream": True, "messages": [{"role": "user", "content": "hi"}]}
+    def stream(opts: dict[str, Any] | None) -> list[dict[str, Any]]:
+        body: dict[str, Any] = {
+            "model": "gpt-4o",
+            "stream": True,
+            "messages": [{"role": "user", "content": "hi"}],
+        }
         if opts:
             body["stream_options"] = opts
         r = client.post("/v1/chat/completions", json=body)

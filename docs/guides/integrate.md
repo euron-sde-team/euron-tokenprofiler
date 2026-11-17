@@ -6,16 +6,19 @@
 from openai import OpenAI
 from tokenprofiler import Profiler
 
-tp = Profiler("http://localhost:8380", "tp_...", app="support-bot")   # an `ingest` key is enough
-client = tp.wrap_openai(OpenAI())      # every call is recorded; return values are unchanged
+tp = Profiler("http://localhost:8380", "tp_...", app="support-bot")  # an `ingest` key is enough
+client = tp.wrap_openai(OpenAI())  # every call is recorded; return values are unchanged
 
 client.chat.completions.create(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Hello"}],
-    tp_prompt_id="greeting",           # optional: group calls by template
+    tp_prompt_id="greeting",  # optional: group calls by template
 )
-tp.close()                              # flushes the queue at shutdown
+tp.close()  # flushes the queue at shutdown
 ```
+
+Anthropic clients work the same way with `tp.wrap_anthropic(client)`; its streamed responses are not recorded by the wrapper
+(their usage arrives in different events), so use `tp.track` for those.
 
 `tp.track(model, prompt_tokens, completion_tokens, ...)` records usage manually; `tp.stats` reports queued, sent, dropped
 and rejected counts. Streaming works: the wrapper requests usage and hides that final chunk from you.
@@ -26,8 +29,15 @@ use backoff, and nothing the SDK does can raise into your code or add latency to
 ## The proxy (any language)
 
 ```python
-OpenAI(base_url="http://localhost:8380/proxy/v1", api_key="tp_...",
-       default_headers={"X-Upstream-Api-Key": "<provider key>", "X-TP-App": "support-bot", "X-TP-Prompt-Id": "greeting"})
+OpenAI(
+    base_url="http://localhost:8380/proxy/v1",
+    api_key="tp_...",
+    default_headers={
+        "X-Upstream-Api-Key": "<provider key>",
+        "X-TP-App": "support-bot",
+        "X-TP-Prompt-Id": "greeting",
+    },
+)
 ```
 
 Chat completions and embeddings are forwarded to `TP_UPSTREAM_BASE_URL` and recorded. Provider errors are passed through

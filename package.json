@@ -1,0 +1,17 @@
+{
+  "name": "euron-tokenprofiler",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An open-source AI token analytics tool that tracks, analyzes and visualizes token consumption, API costs and usage patterns across models, prompts and applications.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.34.5",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "console:dev": "pnpm --filter @tokenprofiler/console dev",
+    "console:build": "pnpm --filter @tokenprofiler/console build",
+    "console:lint": "pnpm --filter @tokenprofiler/console lint",
+    "console:typecheck": "pnpm --filter @tokenprofiler/console typecheck",
+    "console:test": "pnpm --filter @tokenprofiler/console test",
+    "e2e": "pnpm --filter @tokenprofiler/e2e test"
+  }
+}

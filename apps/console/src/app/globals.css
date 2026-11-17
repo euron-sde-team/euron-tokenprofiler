@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens as space-separated RGB so Tailwind can apply alpha. */
+:root,
+:root[data-theme="dark"] {
+  --bg: 11 13 18;
+  --surface: 17 20 27;
+  --raised: 24 28 37;
+  --line: 38 43 54;
+  --fg: 232 235 242;
+  --muted: 154 163 181;
+  --subtle: 107 116 134;
+  --accent: 139 125 255;
+  --accent-fg: 12 9 40;
+  --waiting: 245 180 60;
+  --delayed: 167 139 250;
+  --active: 91 161 255;
+  --completed: 52 211 153;
+  --failed: 248 113 113;
+  --cancelled: 125 135 155;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: 247 248 251;
+  --surface: 255 255 255;
+  --raised: 241 243 248;
+  --line: 223 227 236;
+  --fg: 20 24 35;
+  --muted: 88 98 118;
+  --subtle: 128 137 156;
+  --accent: 97 76 232;
+  --accent-fg: 255 255 255;
+  --waiting: 196 128 10;
+  --delayed: 124 92 220;
+  --active: 36 112 220;
+  --completed: 14 150 104;
+  --failed: 220 60 60;
+  --cancelled: 100 110 130;
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg font-sans text-sm text-fg antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--line)) transparent;
+}
+
+:focus-visible {
+  @apply outline-none ring-2 ring-accent/60 ring-offset-0;
+}
+
+@layer components {
+  .card {
+    @apply min-w-0 rounded-xl border border-line bg-surface;
+  }
+  .label {
+    @apply text-[11px] font-medium uppercase tracking-wider text-subtle;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

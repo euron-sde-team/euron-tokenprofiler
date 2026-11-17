@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tokenprofiler-mock-llm"
+version = "0.1.0"
+description = "A deterministic OpenAI-compatible mock provider with realistic usage, prompt caching and failure modes, for demos and tests."
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = ["tokenprofiler-core", "fastapi>=0.115", "uvicorn[standard]>=0.32"]
+
+[project.scripts]
+mock-llm = "mock_llm.main:serve"
+
+[tool.setuptools.packages.find]
+include = ["mock_llm*"]
